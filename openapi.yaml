@@ -1,0 +1,1102 @@
+openapi: 3.0.3
+info:
+  title: ML Virtual Lab API
+  version: "0.2.0"
+  description: |
+    Backend for the ML Virtual Lab. Three roles: **student**, **instructor**,
+    **admin** — see `CLAUDE.md` for the full onboarding/permission model.
+
+    ### Status
+    Paths marked `x-status: implemented` exist in `app/routers/` today.
+    Paths marked `x-status: planned` are the agreed target design (matches
+    the four starter issues + this onboarding issue) but are not yet coded —
+    treat their shape as a contract to build against, not as fact about
+    what's live.
+
+    ### Auth
+    All endpoints except `/health`, `POST /auth/login` and
+    `POST /batches/{batch_id}/students`'s *targets* (the students being
+    created, not the caller) require a Bearer JWT. A student whose account
+    still has its emailed default password (`must_change_password: true`)
+    can only call `/auth/me` and `/auth/change-password` — every other
+    endpoint returns 403 until it's changed.
+servers:
+  - url: http://localhost:8000
+    description: Local dev
+
+tags:
+  - name: auth
+  - name: batches
+  - name: experiments
+    description: Experiment content (Module 3) and guided-lab config (Module 5)
+  - name: quizzes
+    description: Pre-quiz, post-quiz and graded assignment (Module 4)
+  - name: code-submissions
+    description: Client-executed code exercise results (Module 6)
+  - name: dashboards
+    description: Instructor and student progress/score views (Modules 7 & 8)
+
+security:
+  - bearerAuth: []
+
+paths:
+  /health:
+    get:
+      tags: [auth]
+      summary: Liveness check
+      security: []
+      x-status: implemented
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { status: { type: string, example: ok } }
+
+  # ---------------- AUTH ----------------
+  /auth/login:
+    post:
+      tags: [auth]
+      summary: Log in with email + password
+      security: []
+      x-status: implemented
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/LoginRequest" }
+            examples:
+              default: { value: { email: student1@college.edu, password: "TRbB5JGVwS" } }
+      responses:
+        "200":
+          description: Login succeeded
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TokenResponse" }
+        "401":
+          description: Wrong email or password (same message for both, deliberately)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+              example: { detail: "Invalid credentials" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /auth/me:
+    get:
+      tags: [auth]
+      summary: The logged-in user's own profile
+      x-status: implemented
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/User" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /auth/change-password:
+    post:
+      tags: [auth]
+      summary: Change your own password (required before anything else, for a new student account)
+      x-status: implemented
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ChangePasswordRequest" }
+      responses:
+        "200":
+          description: Password changed; must_change_password is now false
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/User" }
+        "401":
+          description: current_password is wrong, or not logged in
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "422":
+          description: new_password too short, or same as current_password
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  # ---------------- BATCHES ----------------
+  /batches:
+    post:
+      tags: [batches]
+      summary: Create a batch (Admin only)
+      x-status: implemented
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/BatchCreate" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Batch" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409":
+          description: A batch with this name + academic_year already exists
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+    get:
+      tags: [batches]
+      summary: List batches (Admin, Instructor)
+      description: Admins see every batch; an instructor sees only the batches they are assigned to.
+      x-status: implemented
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Batch" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /batches/{batch_id}:
+    get:
+      tags: [batches]
+      summary: Get one batch
+      description: Admins can read any batch; an instructor only a batch they are assigned to (otherwise 403).
+      x-status: implemented
+      parameters:
+        - $ref: "#/components/parameters/BatchId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Batch" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /batches/{batch_id}/students:
+    post:
+      tags: [batches]
+      summary: Upload/onboard students into a batch
+      description: |
+        For each row: if the email is new, creates a student account with a
+        random password (emailed in the background — see `credentials_sent_at`
+        on the created User) and enrolls them; if the email already has an
+        account, enrolls it in this batch if not already enrolled, and never
+        re-emails. Safe to call again with the same or an overlapping list.
+      x-status: implemented
+      parameters:
+        - $ref: "#/components/parameters/BatchId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/StudentUploadRequest" }
+            examples:
+              default:
+                value:
+                  students:
+                    - email: student1@college.edu
+                      full_name: Asha Patil
+                      roll_number: "21CS101"
+                    - email: student2@college.edu
+                      full_name: Rohan Shah
+      responses:
+        "201":
+          description: Rows processed (individual rows may be "already_exists")
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/StudentUploadResponse" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403":
+          description: Not an instructor, or not the instructor assigned to this batch (admins have no access)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: A race with another upload for the same email/roll number
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "422":
+          description: Empty list, too many rows (over MAX_UPLOAD_ROWS), or a malformed email
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  # ---------------- EXPERIMENTS (planned) ----------------
+  /experiments:
+    get:
+      tags: [experiments]
+      summary: List published experiments, in order
+      x-status: planned
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Experiment" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      tags: [experiments]
+      summary: Create an experiment (Admin only)
+      x-status: planned
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ExperimentCreate" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Experiment" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409":
+          description: Slug already in use
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /experiments/{slug}:
+    get:
+      tags: [experiments]
+      summary: Get one published experiment's content, including its quizzes
+      description: |
+        Never includes the evaluation spec / expected output for the code exercise.
+
+        For a student whose assignment is still locked (see the quiz submit endpoint
+        for the rule), the assignment quiz is returned with an empty `questions`
+        list and `assignment_locked: true`, so it cannot even be viewed. Instructors
+        and admins are never locked.
+      x-status: planned
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema: { type: string, example: linear-regression }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ExperimentDetail" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  # ---------------- QUIZZES (planned) ----------------
+  /experiments/{slug}/sections/{section_key}/complete:
+    post:
+      tags: [experiments]
+      summary: Save a student's Mark Completed for a manual section (students only)
+      description: |
+        Idempotent. `section_key` is one of overview, aim-objectives, theory, video,
+        guided-lab, code-exercise. The frontend must re-fetch `GET /experiments/{slug}` afterwards;
+        it must not show the tick itself.
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema: { type: string }
+        - name: section_key
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: Completion saved }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /experiments/{experiment_id}/quizzes:
+    post:
+      tags: [quizzes]
+      summary: Create a quiz (pre/post/assignment) with its questions for an experiment (Admin only)
+      x-status: planned
+      parameters:
+        - name: experiment_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/QuizCreate" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Quiz" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: This experiment already has a quiz of this quiz_type
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /quizzes/{quiz_id}:
+    get:
+      tags: [quizzes]
+      summary: Get a quiz's questions and options
+      description: |
+        Never includes `Option.is_correct` for a student caller.
+        A student cannot fetch the `assignment` quiz while it is locked (403).
+      parameters:
+        - $ref: "#/components/parameters/QuizId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Quiz" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403":
+          description: Student asked for the assignment while it is still locked (the detail lists the steps left)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /quizzes/{quiz_id}/submit:
+    post:
+      tags: [quizzes]
+      summary: Submit answers for a quiz
+      description: |
+        `pre`/`post` quizzes are for the student's own self-assessment, with
+        unlimited attempts. Every attempt's score is stored, and the response
+        carries both `score` (this attempt) and `best_score` (best so far). These
+        scores are never sent to instructors.
+
+        The `assignment` (graded) can be submitted exactly once; a second attempt
+        returns 409. Its `score` is included in the response only if
+        `reveal_policy` allows it yet (`immediate`, or `after_deadline` once the
+        deadline has passed).
+
+        Only students can submit; instructors and admins get 403.
+
+        The `assignment` quiz is locked until the student has finished the
+        earlier steps: Pre-Quiz and Post-Quiz submitted, and the Code Exercise
+        output matching the stored expected result (a step the experiment does
+        not have is skipped; the guided lab is never required). Until then the
+        request is rejected with 403.
+      x-status: planned
+      parameters:
+        - $ref: "#/components/parameters/QuizId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/QuizSubmitRequest" }
+      responses:
+        "201":
+          description: Submitted and graded
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/QuizSubmitResponse" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403":
+          description: Caller is not a student, or the assignment is still locked (the detail lists the steps left)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: The assignment was already submitted (one attempt only), or two submits collided
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "422":
+          description: A question_id not in this quiz, or an option_id not belonging to its question
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  # ---------------- CODE SUBMISSIONS (planned) ----------------
+  /code_submissions:
+    post:
+      tags: [code-submissions]
+      summary: Record the result of a client-executed code exercise
+      description: |
+        The backend never runs student code. The browser (Pyodide, in a Web
+        Worker) has already executed it; this endpoint compares
+        `client_output` to the experiment's hidden `ExperimentEvaluationSpec`
+        and returns feedback. Send `client_error` instead of `client_output`
+        if execution raised in the browser. Students only; instructors and
+        admins get 403.
+      x-status: planned
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CodeSubmissionCreate" }
+      responses:
+        "201":
+          description: Compared and recorded
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CodeSubmissionOut" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404":
+          description: experiment_id not found, or it has no evaluation spec yet
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+    get:
+      tags: [code-submissions]
+      summary: Your own submission history for one experiment
+      x-status: planned
+      parameters:
+        - name: experiment_id
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: OK, newest first
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/CodeSubmissionOut" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  # ---------------- DASHBOARDS (planned) ----------------
+  /dashboards/student:
+    get:
+      tags: [dashboards]
+      summary: Your own scores and per-experiment progress (Student only)
+      description: Instructors and admins get 403; they use the instructor dashboard instead.
+      x-status: planned
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/ExperimentProgress" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /dashboards/instructor:
+    get:
+      tags: [dashboards]
+      summary: (Legacy, instructors only) per-student progress and assignment scores for one batch
+      description: |
+        An instructor sees, per student and experiment, only the overall status
+        (`not_started | in_progress | completed`, shown as Not started / Ongoing /
+        Completed) and the graded assignment (`assignment_status` plus its
+        `assignment_score`, once the quiz's reveal policy allows it). Pre-quiz and
+        post-quiz results are the student's own self-assessment and are never sent
+        to instructors, although finishing them still counts toward the overall
+        status. The guided lab is practice only and is not tracked.
+      x-status: planned
+      parameters:
+        - name: batch_id
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/InstructorStudentProgress" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403":
+          description: Not an instructor, or not the instructor assigned to this batch (admins have no access)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /dashboards/instructor/export:
+    get:
+      tags: [dashboards]
+      summary: Assignment status and score per student, as a CSV download
+      description: |
+        Columns: `student_name`, `roll_number`, `email`, then for each published
+        experiment `<slug>_assignment` (status) and `<slug>_score`. No pre/post
+        quiz columns and no overall-status column.
+      x-status: planned
+      parameters:
+        - name: batch_id
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: CSV file
+          content:
+            text/csv:
+              schema: { type: string, format: binary }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  # ── Instructor console (instructors only; admins and students get 403) ──────
+  /instructor/batches:
+    get:
+      tags: [instructor]
+      summary: The instructor's own batches (id, name, academic_year; no student count)
+      responses:
+        "200": { description: OK }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /instructor/batches/{batch_id}:
+    get:
+      tags: [instructor]
+      summary: Batch information and roster (URN and name only)
+      parameters:
+        - { name: batch_id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200": { description: "name, academic_year, instructor_name, students[{id, urn, full_name}]" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /instructor/experiments:
+    get:
+      tags: [instructor]
+      summary: Published experiments (number, title, slug) in number order
+      responses:
+        "200": { description: OK }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /instructor/experiments/{experiment_id}:
+    get:
+      tags: [instructor]
+      summary: Read-only experiment content with answer keys
+      description: |
+        Overview, aim, objective, theory (`notes`), video, and the pre-quiz, post-quiz
+        and assignment with `is_correct` on every option. No guided lab or code exercise.
+      parameters:
+        - { name: experiment_id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200": { description: OK }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /instructor/experiments/{experiment_id}/assignment:
+    get:
+      tags: [instructor]
+      summary: Experiment number and title plus the assignment questions with correct answers
+      parameters:
+        - { name: experiment_id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200": { description: OK; `assignment` is null when the experiment has none }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /instructor/batches/{batch_id}/experiments/{experiment_id}/status:
+    get:
+      tags: [instructor]
+      summary: Students Status table for one experiment
+      description: Per student `not_started | in_progress | completed` (shown as Not Attempted / In Progress / Completed), using the student tick rule. No section detail.
+      parameters:
+        - { name: batch_id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: experiment_id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200": { description: OK }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /instructor/batches/{batch_id}/experiments/{experiment_id}/status/export:
+    get:
+      tags: [instructor]
+      summary: Excel (.xlsx) of the open experiment's Students Status only
+      parameters:
+        - { name: batch_id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: experiment_id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200": { description: "Excel file. Merged rows on top: Batch, Academic Year, Experiment No., Experiment Name; then a table with URN, Student Name, Status." }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /instructor/batches/{batch_id}/experiments/{experiment_id}/assignment-status:
+    get:
+      tags: [instructor]
+      summary: Assignment Status table (saved percentage, or not submitted)
+      description: Scores are shown immediately; the quiz reveal policy is ignored. Pre/post scores are never returned.
+      parameters:
+        - { name: batch_id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: experiment_id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200": { description: "has_assignment, rows[{student_id, urn, full_name, submitted, score}]" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /instructor/batches/{batch_id}/experiments/{experiment_id}/assignment-status/export:
+    get:
+      tags: [instructor]
+      summary: Excel (.xlsx) of the open assignment's scores only
+      parameters:
+        - { name: batch_id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: experiment_id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200": { description: "Excel file. Merged rows on top: Batch, Academic Year, Experiment No., Experiment Name; then a table with URN, Student Name, Marks (%) (number, or Not Submitted)." }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /instructor/batches/{batch_id}/experiments/{experiment_id}/assignment-status/{student_id}:
+    get:
+      tags: [instructor]
+      summary: One student's submitted assignment with answer key and correct/incorrect marks
+      parameters:
+        - { name: batch_id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: experiment_id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: student_id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200": { description: "experiment_number, experiment_title, student, score, questions[{question_text, options, selected_option_id, is_correct}]" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { description: Not submitted, student not in this batch, or no assignment }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    BatchId:
+      name: batch_id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    QuizId:
+      name: quiz_id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+
+  responses:
+    Unauthorized:
+      description: Missing, invalid or expired token
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          example: { detail: "Not authenticated" }
+    Forbidden:
+      description: Authenticated, but not allowed to do this
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          example: { detail: "You do not have permission to do this" }
+    NotFound:
+      description: Resource does not exist
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          example: { detail: "Not found" }
+    ValidationError:
+      description: Request body failed validation
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        detail: { type: string, example: "Invalid credentials" }
+      required: [detail]
+
+    UserRole:
+      type: string
+      enum: [student, instructor, admin]
+
+    User:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        full_name: { type: string }
+        email: { type: string, format: email }
+        roll_number: { type: string, nullable: true }
+        role: { $ref: "#/components/schemas/UserRole" }
+        is_active: { type: boolean }
+        must_change_password:
+          type: boolean
+          description: True until the student changes their emailed default password.
+      required: [id, full_name, email, role, is_active, must_change_password]
+
+    LoginRequest:
+      type: object
+      properties:
+        email: { type: string, format: email }
+        password: { type: string }
+      required: [email, password]
+
+    TokenResponse:
+      type: object
+      properties:
+        access_token: { type: string }
+        token_type: { type: string, example: bearer }
+        must_change_password: { type: boolean }
+      required: [access_token, token_type, must_change_password]
+
+    ChangePasswordRequest:
+      type: object
+      properties:
+        current_password: { type: string }
+        new_password: { type: string, minLength: 8 }
+      required: [current_password, new_password]
+
+    Batch:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string, example: TE-CSE-A }
+        academic_year: { type: string, example: "2026-27" }
+        created_at: { type: string, format: date-time }
+      required: [id, name, academic_year, created_at]
+
+    BatchCreate:
+      type: object
+      properties:
+        name: { type: string, minLength: 1, maxLength: 100 }
+        academic_year: { type: string, minLength: 1, maxLength: 20 }
+      required: [name, academic_year]
+
+    StudentRow:
+      type: object
+      properties:
+        email: { type: string, format: email }
+        full_name: { type: string, minLength: 1, maxLength: 150 }
+        roll_number: { type: string, nullable: true }
+      required: [email, full_name]
+
+    StudentUploadRequest:
+      type: object
+      properties:
+        students:
+          type: array
+          minItems: 1
+          items: { $ref: "#/components/schemas/StudentRow" }
+      required: [students]
+
+    StudentUploadRowResult:
+      type: object
+      properties:
+        email: { type: string }
+        status:
+          type: string
+          enum: [created, already_exists, already_in_batch]
+      required: [email, status]
+
+    StudentUploadResponse:
+      type: object
+      properties:
+        created: { type: integer }
+        skipped: { type: integer }
+        rows:
+          type: array
+          items: { $ref: "#/components/schemas/StudentUploadRowResult" }
+      required: [created, skipped, rows]
+
+    Experiment:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        slug: { type: string, pattern: "^[a-z0-9-]+$", example: linear-regression }
+        aim: { type: string }
+        objective: { type: string }
+        notes: { type: string, nullable: true, description: Markdown }
+        video_url: { type: string, nullable: true }
+        lab_config:
+          type: object
+          nullable: true
+          description: Guided-lab input/parameter definition, rendered by the frontend.
+        starter_code: { type: string, nullable: true }
+        code_problem_statement: { type: string, nullable: true, description: Shown above the code editor (Theory-style text) }
+        code_dataset_url: { type: string, nullable: true, description: "Dataset file made available to the student's code in the browser, e.g. /datasets/Salary_dataset.csv (served by the frontend)" }
+        allowed_imports:
+          type: array
+          nullable: true
+          items: { type: string }
+          example: [numpy, pandas, sklearn]
+        order_index: { type: integer }
+        is_published: { type: boolean }
+      required: [id, title, slug, aim, objective, order_index, is_published]
+
+    ExperimentCreate:
+      allOf:
+        - $ref: "#/components/schemas/Experiment"
+      # id is server-assigned; everything else the same shape as Experiment
+
+    QuizType:
+      type: string
+      enum: [pre, post, assignment]
+
+    RevealPolicy:
+      type: string
+      enum: [immediate, after_deadline]
+
+    Option:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        option_text: { type: string }
+        is_correct:
+          type: boolean
+          description: Present only in Admin/Instructor responses — stripped for students.
+        order_index: { type: integer }
+      required: [id, option_text, order_index]
+
+    Question:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        question_text: { type: string }
+        order_index: { type: integer }
+        options:
+          type: array
+          items: { $ref: "#/components/schemas/Option" }
+      required: [id, question_text, order_index, options]
+
+    ExperimentDetail:
+      description: |
+        `Experiment` plus its quizzes. For a student whose assignment is locked, the
+        assignment quiz has an empty `questions` list and `assignment_locked` is true.
+      allOf:
+        - $ref: "#/components/schemas/Experiment"
+        - type: object
+          properties:
+            quizzes:
+              type: array
+              items: { $ref: "#/components/schemas/Quiz" }
+            assignment_locked: { type: boolean }
+            assignment_missing_steps:
+              type: array
+              items: { type: string }
+              description: Steps still to complete, e.g. ["Pre-Quiz", "Code Exercise"]. Empty when unlocked.
+            section_completions:
+              type: object
+              additionalProperties: { type: boolean }
+              description: Student-only. Saved Mark Completed state per manual section key.
+            my_review_note:
+              type: string
+              description: |
+                Each assignment quiz in `quizzes` carries `my_review` (per question:
+                selected_option_id, correct_option_ids, is_correct) only for the
+                student who submitted it, and only after submission.
+
+    Quiz:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        experiment_id: { type: string, format: uuid }
+        quiz_type: { $ref: "#/components/schemas/QuizType" }
+        is_scored: { type: boolean }
+        title: { type: string }
+        deadline: { type: string, format: date-time, nullable: true }
+        reveal_policy: { $ref: "#/components/schemas/RevealPolicy" }
+        questions:
+          type: array
+          items: { $ref: "#/components/schemas/Question" }
+        my_attempts:
+          type: integer
+          description: Student only. How many times the caller has submitted this quiz (0 for instructors and admins).
+        my_best_score:
+          type: number
+          nullable: true
+          description: Student only. Pre/post, best attempt; assignment, only once reveal_policy allows it.
+      required: [id, experiment_id, quiz_type, is_scored, title, reveal_policy, questions]
+
+    QuestionCreate:
+      type: object
+      properties:
+        question_text: { type: string }
+        order_index: { type: integer, default: 0 }
+        options:
+          type: array
+          minItems: 2
+          items:
+            type: object
+            properties:
+              option_text: { type: string }
+              is_correct: { type: boolean, default: false }
+              order_index: { type: integer, default: 0 }
+            required: [option_text]
+      required: [question_text, options]
+
+    QuizCreate:
+      type: object
+      properties:
+        quiz_type: { $ref: "#/components/schemas/QuizType" }
+        title: { type: string }
+        deadline: { type: string, format: date-time, nullable: true }
+        reveal_policy: { $ref: "#/components/schemas/RevealPolicy", default: immediate }
+        questions:
+          type: array
+          minItems: 1
+          items: { $ref: "#/components/schemas/QuestionCreate" }
+      required: [quiz_type, title, questions]
+
+    QuizAnswerInput:
+      type: object
+      properties:
+        question_id: { type: string, format: uuid }
+        selected_option_id: { type: string, format: uuid }
+      required: [question_id, selected_option_id]
+
+    QuizSubmitRequest:
+      type: object
+      properties:
+        answers:
+          type: array
+          minItems: 1
+          items: { $ref: "#/components/schemas/QuizAnswerInput" }
+      required: [answers]
+
+    QuizAnswerResult:
+      type: object
+      properties:
+        question_id: { type: string, format: uuid }
+        is_correct: { type: boolean }
+      required: [question_id, is_correct]
+
+    QuizSubmitResponse:
+      type: object
+      properties:
+        attempt_number: { type: integer }
+        score:
+          type: number
+          nullable: true
+          description: This attempt's score. Always present for pre/post; for the assignment only once reveal_policy allows it.
+        best_score:
+          type: number
+          nullable: true
+          description: Pre/post only. Best score over all attempts so far.
+        answers:
+          type: array
+          items: { $ref: "#/components/schemas/QuizAnswerResult" }
+      required: [attempt_number, answers]
+
+    SubmissionStatus:
+      type: string
+      enum: [matched, mismatched, error]
+
+    CodeSubmissionCreate:
+      type: object
+      properties:
+        experiment_id: { type: string, format: uuid }
+        submitted_code: { type: string }
+        client_output:
+          type: object
+          nullable: true
+          description: What Pyodide computed in the browser. Mutually exclusive with client_error.
+        client_error:
+          type: string
+          nullable: true
+          description: Traceback text, if the browser execution raised.
+      required: [experiment_id, submitted_code]
+
+    CodeSubmissionOut:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        experiment_id: { type: string, format: uuid }
+        status: { $ref: "#/components/schemas/SubmissionStatus" }
+        feedback_message: { type: string, nullable: true }
+        submitted_at: { type: string, format: date-time }
+      required: [id, experiment_id, status, submitted_at]
+
+    StepStatus:
+      type: string
+      enum: [not_started, in_progress, completed]
+
+    ExperimentProgress:
+      type: object
+      description: |
+        One student's own progress through one experiment (View Progress and
+        Assignment Scores). `sections` lists every configured section in the
+        approved order with its saved completion.
+      properties:
+        experiment_id: { type: string, format: uuid }
+        experiment_title: { type: string }
+        experiment_number: { type: integer, description: Fixed experiment number (1-10). }
+        has_assignment: { type: boolean }
+        pre_quiz: { $ref: "#/components/schemas/StepStatus" }
+        code_exercise: { $ref: "#/components/schemas/StepStatus" }
+        post_quiz: { $ref: "#/components/schemas/StepStatus" }
+        assignment: { $ref: "#/components/schemas/StepStatus" }
+        assignment_score:
+          type: number
+          nullable: true
+          description: Percentage. Visible to the student immediately after submission.
+        overall_status:
+          $ref: "#/components/schemas/StepStatus"
+          description: |
+            Ticks only. not_started = no section completed; in_progress = some but
+            not all; completed = every configured section completed.
+        section_statuses:
+          type: object
+          additionalProperties: { type: string }
+          description: Manual sections only (kept for compatibility).
+        sections:
+          type: array
+          items:
+            type: object
+            properties:
+              key: { type: string, example: pre-quiz }
+              completed: { type: boolean }
+            required: [key, completed]
+      required:
+        - experiment_id
+        - experiment_title
+        - pre_quiz
+        - code_exercise
+        - post_quiz
+        - assignment
+        - overall_status
+
+    InstructorExperimentProgress:
+      type: object
+      description: |
+        What an instructor sees per student per experiment. Pre/post quiz results
+        are the student's self-assessment and are not included.
+      properties:
+        experiment_id: { type: string, format: uuid }
+        experiment_title: { type: string }
+        overall_status: { $ref: "#/components/schemas/StepStatus" }
+        assignment_status: { $ref: "#/components/schemas/StepStatus" }
+        assignment_score:
+          type: number
+          nullable: true
+          description: Only present once the assignment is submitted and reveal_policy allows it.
+      required: [experiment_id, experiment_title, overall_status, assignment_status]
+
+    InstructorStudentProgress:
+      type: object
+      properties:
+        student_id: { type: string, format: uuid }
+        student_name: { type: string }
+        roll_number: { type: string, nullable: true }
+        experiments:
+          type: array
+          items: { $ref: "#/components/schemas/InstructorExperimentProgress" }
+      required: [student_id, student_name, experiments]

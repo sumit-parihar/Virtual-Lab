@@ -1,0 +1,29 @@
+"""
+Import every model here so `Base.metadata` knows about all tables when
+`create_all` (or Alembic autogenerate) runs, and so `from app.models import X`
+works from anywhere in the app.
+"""
+from app.models.user import User, UserRole
+from app.models.batch import Batch, Enrollment, InstructorAssignment
+from app.models.experiment import Experiment, ExperimentEvaluationSpec
+from app.models.quiz import (
+    Quiz,
+    QuizType,
+    RevealPolicy,
+    Question,
+    Option,
+    QuizSubmission,
+    QuizAnswer,
+)
+from app.models.code_submission import CodeSubmission, SubmissionStatus
+from app.models.section_completion import SectionCompletion
+from app.models.student_quiz_progress import StudentQuizProgress
+
+__all__ = [
+    "User", "UserRole",
+    "Batch", "Enrollment", "InstructorAssignment",
+    "Experiment", "ExperimentEvaluationSpec",
+    "Quiz", "QuizType", "RevealPolicy", "Question", "Option", "QuizSubmission", "QuizAnswer",
+    "CodeSubmission", "SubmissionStatus",
+    "SectionCompletion", "StudentQuizProgress",
+]
