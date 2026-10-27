@@ -49,7 +49,7 @@
   transition: box-shadow 0.15s, border-color 0.15s, transform 0.12s;
 }
 .ic-batch-card:hover {
-  box-shadow: 0 4px 16px rgba(37, 99, 235, 0.12);
+  box-shadow: 0 4px 16px rgba(15, 118, 110, 0.14);
   border-color: var(--color-primary);
   transform: translateY(-2px);
   color: var(--color-text);
@@ -115,7 +115,7 @@
   color: var(--color-text);
 }
 .ic-sidebar__link.active {
-  background: #dbeafe;
+  background: var(--color-primary-soft);
   color: var(--color-primary-dark);
   font-weight: 600;
 }
@@ -236,7 +236,7 @@
   color: var(--color-text);
 }
 .ic-sidebar__sublink.active {
-  background: #dbeafe;
+  background: var(--color-primary-soft);
   color: var(--color-primary-dark);
   font-weight: 600;
 }
@@ -352,8 +352,8 @@ button.ic-sidebar__note {
   border-radius: var(--radius);
 }
 .ic-quiz__option--correct {
-  border-color: #86efac;
-  background: #f0fdf4;
+  border-color: #9bd8b4;
+  background: var(--color-success-soft);
 }
 
 /* Assignment status and submission review */
@@ -381,6 +381,81 @@ button.ic-sidebar__note {
   flex-shrink: 0;
 }
 .ic-quiz__option--wrong {
-  border-color: #fca5a5;
-  background: #fef2f2;
+  border-color: #f1b4b4;
+  background: var(--color-error-soft);
+}
+
+/* ── Appearance refresh ──────────────────────────────────────────────────── */
+.ic-page__title {
+  letter-spacing: -0.02em;
+}
+.ic-empty {
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+.ic-batch-card {
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+.ic-batch-card:hover {
+  box-shadow: var(--shadow-md);
+}
+.ic-batch-card__banner {
+  background: linear-gradient(135deg, var(--color-primary) 0%, #14998d 100%);
+  padding: 2.25rem var(--space-2) var(--space-2);
+}
+.ic-sidebar {
+  position: sticky;
+  top: 5rem; /* below the sticky navbar */
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+.ic-sidebar__link:hover,
+.ic-sidebar__sublink:hover {
+  background: var(--color-primary-soft);
+  color: var(--color-primary-dark);
+}
+.ic-sidebar__link.active {
+  background: var(--color-primary-soft);
+  color: var(--color-primary-dark);
+  box-shadow: inset 3px 0 0 var(--color-primary);
+}
+.ic-sidebar__sublink.active {
+  background: var(--color-primary-soft);
+  color: var(--color-primary-dark);
+}
+.ic-table-wrap {
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+.ic-table th {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.ic-table tbody tr:hover td {
+  background: #f8fbfa;
+}
+.ic-tab {
+  font-weight: 500;
+}
+.ic-quiz__option {
+  border-radius: 10px;
+}
+.ic-quiz__text {
+  color: var(--color-text);
+}
+.ic-info {
+  background: var(--color-surface);
+}
+
+@media (max-width: 760px) {
+  .ic-sidebar {
+    position: static;
+  }
+}
+
+.ic-inactive {
+  margin-left: 0.5rem;
+  vertical-align: middle;
 }

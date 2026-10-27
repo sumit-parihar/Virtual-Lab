@@ -1,25 +1,31 @@
+import { Suspense, lazy } from "react";
 import { Routes, Route, Navigate, Outlet } from "react-router-dom";
 import { useAuth } from "./context/AuthContext.jsx";
 import Layout from "./components/Layout.jsx";
 
-// Pages
+// Pages. Everything except Home and Login is loaded only when it is first opened, so the first load stays small.
 import Home from "./pages/Home.jsx";
 import Login from "./pages/Login.jsx";
-import ChangePassword from "./pages/ChangePassword.jsx";
-import Experiments from "./pages/Experiments.jsx";
-import ExperimentPage from "./pages/ExperimentPage.jsx";
-import Profile from "./pages/Profile.jsx";
-import StudentDashboard from "./pages/StudentDashboard.jsx";
-import AssignmentScores from "./pages/AssignmentScores.jsx";
-import InstructorBatches from "./pages/InstructorBatches.jsx";
-import InstructorBatchWorkspace from "./pages/InstructorBatchWorkspace.jsx";
-import InstructorBatchInfo from "./pages/InstructorBatchInfo.jsx";
-import InstructorExperiment from "./pages/InstructorExperiment.jsx";
-import InstructorExperimentStatus from "./pages/InstructorExperimentStatus.jsx";
-import InstructorAssignment from "./pages/InstructorAssignment.jsx";
-import InstructorAssignmentStatus from "./pages/InstructorAssignmentStatus.jsx";
-import InstructorSubmission from "./pages/InstructorSubmission.jsx";
-import AdminPanel from "./pages/AdminPanel.jsx";
+const ChangePassword = lazy(() => import("./pages/ChangePassword.jsx"));
+const Experiments = lazy(() => import("./pages/Experiments.jsx"));
+const ExperimentPage = lazy(() => import("./pages/ExperimentPage.jsx"));
+const Profile = lazy(() => import("./pages/Profile.jsx"));
+const StudentDashboard = lazy(() => import("./pages/StudentDashboard.jsx"));
+const AssignmentScores = lazy(() => import("./pages/AssignmentScores.jsx"));
+const InstructorBatches = lazy(() => import("./pages/InstructorBatches.jsx"));
+const InstructorBatchWorkspace = lazy(() => import("./pages/InstructorBatchWorkspace.jsx"));
+const InstructorBatchInfo = lazy(() => import("./pages/InstructorBatchInfo.jsx"));
+const InstructorExperiment = lazy(() => import("./pages/InstructorExperiment.jsx"));
+const InstructorExperimentStatus = lazy(() => import("./pages/InstructorExperimentStatus.jsx"));
+const InstructorAssignment = lazy(() => import("./pages/InstructorAssignment.jsx"));
+const InstructorAssignmentStatus = lazy(() => import("./pages/InstructorAssignmentStatus.jsx"));
+const InstructorSubmission = lazy(() => import("./pages/InstructorSubmission.jsx"));
+const ForgotPassword = lazy(() => import("./pages/ForgotPassword.jsx"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword.jsx"));
+const AdminBatches = lazy(() => import("./pages/AdminBatches.jsx"));
+const AdminBatchDetail = lazy(() => import("./pages/AdminBatchDetail.jsx"));
+const AdminInstructors = lazy(() => import("./pages/AdminInstructors.jsx"));
+const AdminStudents = lazy(() => import("./pages/AdminStudents.jsx"));
 
 /** Routes that require a logged-in user. Redirects to /login if not. */
 function RequireAuth() {
@@ -61,10 +67,13 @@ function RequireNotInstructor() {
 
 export default function App() {
   return (
+    <Suspense fallback={<div className="page-loading">Loading…</div>}>
     <Routes>
       {/* Public */}
       <Route path="/login" element={<Login />} />
       <Route path="/change-password" element={<ChangePassword />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
 
       {/* Authenticated layout */}
       <Route element={<RequireAuth />}>
@@ -97,7 +106,11 @@ export default function App() {
 
           {/* Admin only */}
           <Route element={<RequireAdmin />}>
-            <Route path="/admin" element={<AdminPanel />} />
+            <Route path="/admin" element={<Navigate to="/admin/batches" replace />} />
+            <Route path="/admin/batches" element={<AdminBatches />} />
+            <Route path="/admin/batches/:batchId" element={<AdminBatchDetail />} />
+            <Route path="/admin/instructors" element={<AdminInstructors />} />
+            <Route path="/admin/students" element={<AdminStudents />} />
           </Route>
         </Route>
       </Route>
@@ -105,5 +118,6 @@ export default function App() {
       {/* Fallback */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </Suspense>
   );
 }

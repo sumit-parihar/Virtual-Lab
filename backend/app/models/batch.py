@@ -1,5 +1,5 @@
 import uuid
-from sqlalchemy import DateTime, ForeignKey, String, UniqueConstraint, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, String, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -12,6 +12,9 @@ class Batch(Base, UUIDPKMixin, TimestampMixin):
     name: Mapped[str] = mapped_column(String(100), nullable=False)  # e.g. "TE-CSE-A"
     academic_year: Mapped[str] = mapped_column(String(20), nullable=False)  # e.g. "2026-27"
 
+    # Archived batches are hidden from lists and from the instructor console; nothing is deleted.
+    is_archived: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+
     __table_args__ = (UniqueConstraint("name", "academic_year", name="uq_batch_name_year"),)
 
     enrollments = relationship("Enrollment", back_populates="batch")
@@ -19,14 +22,14 @@ class Batch(Base, UUIDPKMixin, TimestampMixin):
 
 
 class Enrollment(Base, UUIDPKMixin):
-    """Student <-> Batch."""
+    """Student <-> Batch. A student belongs to exactly one batch (student_id is unique)."""
     __tablename__ = "enrollments"
 
     student_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     batch_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("batches.id", ondelete="CASCADE"), nullable=False)
     enrolled_at: Mapped["DateTime"] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
-    __table_args__ = (UniqueConstraint("student_id", "batch_id", name="uq_student_batch"),)
+    __table_args__ = (UniqueConstraint("student_id", name="uq_enrollment_student"),)
 
     student = relationship("User", back_populates="enrollments", foreign_keys=[student_id])
     batch = relationship("Batch", back_populates="enrollments")

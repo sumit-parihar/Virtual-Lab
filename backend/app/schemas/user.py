@@ -31,3 +31,33 @@ class TokenResponse(BaseModel):
 class ChangePasswordRequest(BaseModel):
     current_password: str
     new_password: str  # frontend enforces min length; backend also checks (see router)
+
+
+class PasswordChangedOut(UserOut):
+    """The user, plus a fresh login token (the old one stops working when the password changes)."""
+    access_token: str
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str
+
+
+class BatchBrief(BaseModel):
+    id: uuid.UUID
+    name: str
+    academic_year: str
+
+
+class ProfileOut(BaseModel):
+    """What the Profile page shows (read-only)."""
+    full_name: str
+    email: EmailStr
+    role: UserRole
+    roll_number: Optional[str] = None  # students
+    batch: Optional[BatchBrief] = None  # students: their one batch
+    batches: list[BatchBrief] = []  # instructors: the batches they teach

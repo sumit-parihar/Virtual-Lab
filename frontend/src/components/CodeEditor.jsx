@@ -1,8 +1,14 @@
 import { useState } from "react";
-import Editor from "@monaco-editor/react";
+import Editor, { loader } from "@monaco-editor/react";
 import { usePyodide } from "../editor/usePyodide.js";
 import { codeSubmissionsApi } from "../api/codeSubmissions.js";
 import "./CodeEditor.css";
+
+// With VITE_SELF_HOST_EDITOR=true the Monaco editor files come from /monaco/vs (created by `npm run setup:editor`)
+// instead of the public CDN.
+if (import.meta.env.VITE_SELF_HOST_EDITOR === "true") {
+  loader.config({ paths: { vs: "/monaco/vs" } });
+}
 
 /**
  * CodeEditor — Module 6 (Client-side Code Execution Engine).
@@ -19,6 +25,7 @@ export default function CodeEditor({ experiment, onSubmitted, canSubmit = true }
   const [submitResult, setSubmitResult] = useState(null);
   const [submitError, setSubmitError] = useState("");
   const [datasetError, setDatasetError] = useState("");
+  const [submittedOutput, setSubmittedOutput] = useState(null); // what the student submitted, shown with the verdict
 
   // Optional dataset file: copied into the browser's Python environment under its file name.
   const datasetUrl = experiment?.code_dataset_url || "";
@@ -56,6 +63,7 @@ export default function CodeEditor({ experiment, onSubmitted, canSubmit = true }
         result.error ? null : result.output,
         result.error || null
       );
+      setSubmittedOutput(result.error ? null : result.output ?? null);
       setSubmitResult(sub);
       onSubmitted?.(sub);
     } catch (err) {
@@ -144,13 +152,24 @@ export default function CodeEditor({ experiment, onSubmitted, canSubmit = true }
         </div>
       )}
 
-      {/* Submission feedback */}
+      {/* Submission result: the student's own output and whether it is correct */}
       {submitResult && (
-        <div className={`alert ${submitResult.status === "matched" ? "alert--success" : submitResult.status === "error" ? "alert--error" : "alert--info"}`}>
+        <div className={`alert ${submitResult.status === "matched" ? "alert--success" : submitResult.status === "error" ? "alert--error" : "alert--warning"}`}>
           <strong>
-            {submitResult.status === "matched" ? "✓ Matched" : submitResult.status === "error" ? "✗ Error" : "≠ Mismatched"}
+            {submitResult.status === "matched" ? "✓ Correct" : submitResult.status === "error" ? "✗ Error" : "✗ Incorrect"}
           </strong>{" "}
-          — {submitResult.feedback_message}
+          —{" "}
+          {submitResult.status === "matched"
+            ? "your output matches the expected result."
+            : submitResult.status === "error"
+              ? "your code raised an error, so it could not be checked."
+              : "your output does not match the expected result. Review your code and try again."}
+          {submitResult.status !== "error" && (
+            <div className="code-editor__verdict-output">
+              <span>Your output (result):</span>
+              <pre>{submittedOutput === null ? "(no value stored in result)" : JSON.stringify(submittedOutput)}</pre>
+            </div>
+          )}
         </div>
       )}
 

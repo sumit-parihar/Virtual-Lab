@@ -13,7 +13,17 @@ const STATUS = {
 
 const COLUMNS = [
   { key: "urn", label: "URN", value: (r) => r.urn || "" , render: (r) => r.urn || "—" },
-  { key: "name", label: "Name", value: (r) => r.full_name },
+  {
+    key: "name",
+    label: "Name",
+    value: (r) => r.full_name,
+    render: (r) => (
+      <span>
+        {r.full_name}
+        {!r.is_active && <span className="badge badge--gray ic-inactive">Inactive</span>}
+      </span>
+    ),
+  },
   {
     key: "status",
     label: "Status",

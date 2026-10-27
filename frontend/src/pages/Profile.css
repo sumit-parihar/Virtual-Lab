@@ -37,3 +37,23 @@
   font-weight: 500;
   word-break: break-word;
 }
+
+/* ── Appearance refresh ──────────────────────────────────────────────────── */
+.profile {
+  padding: 0;
+}
+.profile__card {
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+.profile__row:hover {
+  background: #f8fbfa;
+}
+.profile__label {
+  font-weight: 500;
+}
+
+.profile__actions {
+  margin-top: var(--space-3);
+}

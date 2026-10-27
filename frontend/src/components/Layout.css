@@ -1,5 +1,11 @@
 .layout__main {
   max-width: var(--max-width);
   margin: 0 auto;
-  padding: var(--space-3) var(--space-2);
+  padding: var(--space-4) var(--space-3) 3rem;
+}
+
+@media (max-width: 640px) {
+  .layout__main {
+    padding: var(--space-3) var(--space-2) 2rem;
+  }
 }

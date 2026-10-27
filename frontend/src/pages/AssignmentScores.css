@@ -49,3 +49,21 @@
 .scores-page__table tr:last-child td {
   border-bottom: none;
 }
+
+/* ── Appearance refresh ──────────────────────────────────────────────────── */
+.scores-page {
+  max-width: 900px;
+  padding: 0;
+}
+.scores-page__table-wrap {
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+.scores-page__table th {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.scores-page__table tbody tr:hover td {
+  background: #f8fbfa;
+}

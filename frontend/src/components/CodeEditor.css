@@ -72,3 +72,33 @@
   color: var(--color-text-muted);
   margin: 0;
 }
+
+/* ── Appearance refresh ──────────────────────────────────────────────────── */
+.code-editor__monaco {
+  border-radius: 12px;
+  box-shadow: var(--shadow-sm);
+}
+.code-editor__imports {
+  background: var(--color-primary-soft);
+  border-color: var(--color-primary-border);
+  color: var(--color-primary-dark);
+}
+.code-editor__output {
+  border-radius: 12px;
+  background: #10201f;
+}
+
+.code-editor__verdict-output {
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+}
+.code-editor__verdict-output pre {
+  margin: 0.25rem 0 0;
+  padding: 0.5rem 0.75rem;
+  background: rgba(255, 255, 255, 0.7);
+  border-radius: 8px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: var(--font-mono);
+  color: var(--color-text);
+}

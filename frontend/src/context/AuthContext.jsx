@@ -33,8 +33,10 @@ export function AuthProvider({ children }) {
   }, []);
 
   const logout = useCallback(() => {
+    const token = localStorage.getItem("access_token");
     localStorage.removeItem("access_token");
     setUser(null);
+    if (token) authApi.logout(token).catch(() => {}); // best effort: the browser is already signed out
   }, []);
 
   const refreshUser = useCallback(async () => {

@@ -14,7 +14,7 @@ shown immediately, as percentages.
 - An instructor who opens `/experiments` is sent to `/batches`; experiments are viewed inside a batch.
 
 ## Batches (`/batches`)
-Cards for the instructor's batches showing the batch name and academic year. If no batch is assigned, a message
+Cards for the instructor's batches (archived batches are not shown) showing the batch name and academic year. If no batch is assigned, a message
 says so. A failed load shows an error with a Retry button.
 
 ## Batch workspace (`/batches/:batchId`)
@@ -51,6 +51,10 @@ every question with the correct answer, the student's answer and a Correct or In
 Both downloads are `.xlsx` files. Batch, Academic Year, Experiment No. and Experiment Name sit in merged rows at the
 top, followed by a table: URN, Student Name and Status (or Marks (%) for assignments). File names:
 `batch_<name>_<year>_experiment_<n>_status.xlsx` and `batch_<name>_<year>_experiment_<n>_assignment_scores.xlsx`.
+
+## Deactivated students
+A student the admin has deactivated stays in the lists and tables with an **Inactive** label, and the name in the Excel
+downloads is followed by "(Inactive)".
 
 ## States
 All pages show loading and error states (with Retry where it applies), and empty-state messages for no batches,

@@ -21,6 +21,7 @@ class InstructorStudentOut(BaseModel):
     id: uuid.UUID
     urn: Optional[str] = None  # the student's roll number / URN
     full_name: str
+    is_active: bool = True  # False for a deactivated student (shown as Inactive)
 
 
 class InstructorBatchDetail(BaseModel):
@@ -61,6 +62,7 @@ class InstructorStatusRow(BaseModel):
     student_id: uuid.UUID
     urn: Optional[str] = None
     full_name: str
+    is_active: bool = True
     status: str  # not_started | in_progress | completed
 
 
@@ -74,6 +76,7 @@ class InstructorAssignmentRow(BaseModel):
     student_id: uuid.UUID
     urn: Optional[str] = None
     full_name: str
+    is_active: bool = True
     submitted: bool
     score: Optional[float] = None  # percentage 0-100; None when not submitted
 

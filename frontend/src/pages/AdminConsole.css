@@ -1,0 +1,145 @@
+/* Admin console: batches, instructors, students, import, dialogs. */
+.admin-link {
+  font-weight: 600;
+  color: var(--color-primary-dark);
+}
+.admin-link:hover {
+  text-decoration: underline;
+}
+.admin-year {
+  font-weight: 500;
+  font-size: 1.1rem;
+}
+.admin-inline-badge {
+  margin-left: 0.5rem;
+  vertical-align: middle;
+}
+.admin-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: var(--space-2);
+  color: var(--color-text-muted);
+  font-size: 0.92rem;
+}
+.admin-card {
+  margin-bottom: var(--space-3);
+}
+.admin-card__title {
+  font-size: 1.15rem;
+  margin-bottom: var(--space-1);
+}
+.admin-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1);
+  margin: var(--space-2) 0;
+}
+.admin-select {
+  width: auto;
+  min-width: 16rem;
+  max-width: 100%;
+}
+.admin-inline-label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin: 0;
+}
+.admin-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+.admin-status {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.2rem;
+}
+.admin-status__note {
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+}
+.admin-status__note--bad {
+  color: var(--color-error);
+  font-weight: 600;
+}
+.admin-batch-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.75rem;
+}
+.alert--warning {
+  background: var(--color-warning-soft);
+  color: var(--color-warning);
+  border: 1px solid #f1dba6;
+}
+
+/* Import preview */
+.admin-import {
+  margin-top: var(--space-2);
+}
+.admin-import__summary {
+  margin-bottom: var(--space-1);
+}
+.admin-import__table {
+  max-height: 22rem;
+  overflow: auto;
+}
+
+/* Dialog */
+.modal__backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-2);
+  background: rgba(18, 33, 31, 0.45);
+}
+.modal {
+  width: 100%;
+  max-width: 460px;
+  max-height: 90vh;
+  overflow: auto;
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  padding: var(--space-3);
+}
+.modal__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-2);
+}
+.modal__title {
+  margin: 0;
+  font-size: 1.2rem;
+}
+.modal__close {
+  border: none;
+  background: transparent;
+  font-size: 1.6rem;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--color-text-muted);
+}
+.admin-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.admin-form .form-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.admin-form__buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-1);
+}

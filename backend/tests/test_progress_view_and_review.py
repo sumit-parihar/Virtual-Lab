@@ -87,15 +87,12 @@ def test_student_sees_own_graded_answers_after_submission(client, db):
     assert submit_quiz(client, student, exp, "assignment", correct=False).status_code == 201
 
     q = exp.quizzes["assignment"]
-    for review in (
-        quiz_in(get_experiment(client, student, exp), "assignment")["my_review"],
-        client.get(f"/quizzes/{q.quiz_id}", headers=student.headers).json()["my_review"],
-    ):
-        assert len(review) == 1
-        assert review[0]["question_id"] == str(q.question_id)
-        assert review[0]["selected_option_id"] == str(q.wrong_id)
-        assert review[0]["correct_option_ids"] == [str(q.right_id)]
-        assert review[0]["is_correct"] is False
+    review = quiz_in(get_experiment(client, student, exp), "assignment")["my_review"]
+    assert len(review) == 1
+    assert review[0]["question_id"] == str(q.question_id)
+    assert review[0]["selected_option_id"] == str(q.wrong_id)
+    assert review[0]["correct_option_ids"] == [str(q.right_id)]
+    assert review[0]["is_correct"] is False
 
 
 def test_correct_answer_is_marked_correct_in_review(client, db):

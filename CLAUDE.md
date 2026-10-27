@@ -11,9 +11,10 @@ post-quiz, and a graded assignment.
 Linked from the university LMS but run as an independent app — its own
 accounts, data, and hosting.
 
-Three roles: **student** (self-enrolled by an instructor's upload, never
-self-registers), **instructor** (created by Admin, scoped to their
-assigned batches only), **admin** (the college dev team, full control).
+Three roles: **student** (added by the admin from a file, never
+self-registers), **instructor** (created by the admin, scoped to their
+assigned batch(es) only), **admin** (manages batches, instructors and students;
+no access to the instructor console, no experiment management for now).
 
 ## Tech stack
 - **DB**: PostgreSQL, SQLAlchemy 2.0 (declarative, `Mapped[...]` style)
@@ -32,30 +33,15 @@ never serialized to a student-facing response). This is why the earlier
 "Docker sandbox" design was dropped — don't reintroduce server-side
 execution.
 
-**No self-registration.** Students never create their own accounts.
-An instructor (assigned to a batch) or Admin calls
-`POST /batches/{batch_id}/students` with a list of emails/names. Each new
-email gets a `User` with a random per-student password (`must_change_password
-= True`) and a background email with that password
-(`app/core/mailer.py`). Re-uploading the same list is idempotent — existing
-emails are just enrolled if not already, never re-created or re-emailed.
-`get_current_active_user` (in `app/core/deps.py`) blocks every endpoint
-except login/me/change-password until the student has changed that default
-password.
-
-**No refresh tokens.** Access tokens are long-lived (`ACCESS_TOKEN_EXPIRE_MINUTES`,
-default 8h) instead of the usual short-access + refresh-token pair. This is
-a deliberate simplicity trade-off for a college project with modest
-security requirements — revisit if that stops being true.
-
-**Progress is derived from persisted activity records.** Manual static-section
-completion is stored in `SectionCompletion`; pre/post quiz submitted status and
-best score are stored in one `StudentQuizProgress` row per student/quiz; accepted
-assignment submissions are stored in `QuizSubmission`. Code submissions
-(`CodeSubmission`) are kept for feedback only and never affect progress. Overall
-experiment progress is derived on read from these records in
-`app/services/progress.py`. Guided Lab and Code Exercise are tracked through the
-same manual Mark Completed mechanism as the other manual sections.
+**No self-registration.** Only the admin creates accounts (`/admin/*`). New students
+(from a CSV/Excel file) and new instructors get a `User` with a random temporary
+password (`must_change_password = True`) and a background email with that password
+(`app/core/mailer.py`), whose result (sent / failed / console) is saved in
+`users.credentials_status`. "Resend invitation" issues a new temporary password; it never
+creates another account. `get_current_active_user` (in `app/core/deps.py`) blocks every
+endpoint except login/me/change-password until the temporary password has been changed.
+Account state shown to the admin: Invited (`must_change_password`), Active, Deactivated
+(`is_active = false`).
 
 **IDs are UUIDs, not auto-increment ints** — avoids sequential IDs being
 guessable/enumerable in a public-ish API.
@@ -63,9 +49,9 @@ guessable/enumerable in a public-ish API.
 **Roles are enforced with FastAPI dependencies, not decorators or
 middleware**: `require_roles(UserRole.admin, ...)` in
 `app/core/deps.py`. An instructor's batch-scoping (only their own assigned
-batches) is checked per-endpoint, not just per-role — see
-`_assert_can_manage_batch` in `app/routers/batches.py` as the pattern to
-copy for any new instructor-facing, batch-scoped endpoint.
+batches) is checked per-endpoint, not just per-role — see `_own_batch` in
+`app/routers/instructor.py` as the pattern to copy for any new instructor-facing,
+batch-scoped endpoint.
 
 ## Folder structure
 ```
@@ -118,7 +104,7 @@ docs/            # STUDENT_CONSOLE.md, INSTRUCTOR_CONSOLE.md, DEVELOPMENT_HISTOR
   — the spec is meant to stay accurate, not aspirational.
 - **Background work** (anything that shouldn't block the response, like
   sending email) goes through FastAPI's `BackgroundTasks`, following the
-  pattern in `routers/batches.py`'s `upload_students`.
+  pattern in `routers/admin.py`'s `_invite`.
 
 ## Running locally
 ```bash
@@ -147,13 +133,13 @@ New endpoints should add tests there and also be checked manually via `/docs`.
 The frontend has no automated tests yet; `npm run build` is the minimum check.
 
 ## What's implemented
-- **Backend**: auth (login/me/change-password), batches (create/list/get, student upload
-  + onboarding email, instructor assignment with one instructor per batch), experiments
-  (with their quizzes), quizzes (submit + assignment lock), code_submissions, student
-  dashboard, the instructor console API (`/instructor/*`).
-- **Frontend**: student console, instructor console, change-password, an admin panel from
-  the original build (final admin console pending).
-- Consoles are described in `docs/STUDENT_CONSOLE.md` and `docs/INSTRUCTOR_CONSOLE.md`;
+- **Backend**: auth (login/me/change-password), experiments (with their quizzes), quizzes
+  (submit + assignment lock), code_submissions, student dashboard, the instructor console
+  API (`/instructor/*`) and the admin console API (`/admin/*`).
+- **Frontend**: student console, instructor console, admin console (batches, instructors,
+  students, student import), change-password.
+- Consoles are described in `docs/STUDENT_CONSOLE.md`, `docs/INSTRUCTOR_CONSOLE.md` and
+  `docs/ADMIN_CONSOLE.md`;
   pending work is listed in the README ("Pending work").
 - `openapi.yaml` documents the API; its `x-status` markers can lag behind the code, so
   check the router file itself for what is actually live.
@@ -169,8 +155,13 @@ The frontend has no automated tests yet; `npm run build` is the minimum check.
   for instructors only (admins and students get 403). An instructor reaches only
   their own batches. **One instructor per batch** is enforced (unique `batch_id`
   on `instructor_assignments`; assigning a second instructor returns 409), while
-  one instructor can have several batches. Admins still use `/batches` for
-  management.
+  one instructor can have several batches. The admin changes instructors through
+  `PUT/DELETE /admin/batches/{id}/instructor` (replace / remove in one transaction).
+  A student belongs to exactly one batch (`enrollments.student_id` is unique); moving a
+  student keeps their progress and scores (they belong to the student, not the batch).
+  Archived batches (`batches.is_archived`) are hidden from lists and from instructors;
+  users are deactivated, never deleted. Deactivated students stay visible to their
+  instructor with an Inactive label.
 - **Instructor views**: published experiments only; read-only content with answer
   keys; Students Status (Not Attempted / In Progress / Completed by the student
   tick rule); Assignment Status with saved percentage immediately (reveal policy
@@ -193,7 +184,7 @@ The frontend has no automated tests yet; `npm run build` is the minimum check.
   and Video, and counted for every experiment. The editor and Submit button remain: the student's
   answer is the value of the variable `result`, computed in the browser and compared by the
   backend with the hidden `ExperimentEvaluationSpec` result (exact comparison for now), and
-  Submit only shows matched or mismatched. A match does not tick the section.
+  Submit shows the student's own output and a Correct/Incorrect verdict. A match does not tick the section.
   `experiments.code_problem_statement` (optional) is shown above the editor and
   `experiments.code_dataset_url` (optional) names a dataset file that the code runner copies into
   the browser's Python environment under its file name. The expected result is never sent to students.
@@ -221,11 +212,18 @@ The frontend has no automated tests yet; `npm run build` is the minimum check.
   `my_review` is returned only to the submitting student and only after submission.
 
 
-## Known gaps (deferred to the admin phase)
-Other pending items (Home text, Profile fields, admin console, code-exercise matching rules,
-remaining experiment content) are listed in the README under "Pending work".
+## UI styling
+The look of the app is defined by the CSS variables in `frontend/src/styles/global.css`
+(teal-green palette, radii, shadows, font stack). Change the colours there and every page
+follows. Shared pieces (buttons, forms, cards, badges, tables, alerts, login card) are in the
+same file; the navbar is `components/Navbar.css`. Page stylesheets end with an "Appearance
+refresh" block. Styling changes do not touch behaviour, text or routes. No UI or icon
+packages are used.
 
-- `GET /quizzes/{quiz_id}` still returns answer keys to any instructor or admin, with no
-  batch check and no published-experiment check. The student UI does not call it and the
-  instructor console does not use it (it uses `/instructor/*`). Students never receive
-  `is_correct` from it. Decide what admins may see, then restrict or remove it.
+## Security notes
+- Sign-in lockout and token versioning are in `app/routers/auth.py` and `app/core/deps.py`; the per-IP limiter is
+  `app/core/ratelimit.py` (in memory, per process). Tests reset it in `tests/conftest.py`.
+- Anything that should end a user's logins bumps `users.token_version` (logout, password change/reset, admin reset, deactivation).
+- `GET /quizzes/{quiz_id}` was removed (nothing used it); quiz data reaches students only through `GET /experiments/{slug}` and
+  instructors through `/instructor/*`.
+- API docs are off when `ENV=production` (`create_app` in `app/main.py`).

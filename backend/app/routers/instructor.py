@@ -70,7 +70,7 @@ STATUS_LABEL = {
 
 def _own_batch(batch_id: uuid.UUID, user: User, db: Session) -> Batch:
     batch = db.get(Batch, batch_id)
-    if batch is None:
+    if batch is None or batch.is_archived:  # archived batches are hidden from instructors
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Batch not found")
     assigned = (
         db.query(InstructorAssignment.id)
@@ -100,7 +100,7 @@ def _batch_students(batch_id: uuid.UUID, db: Session) -> list[User]:
 
 
 def _student_out(s: User) -> InstructorStudentOut:
-    return InstructorStudentOut(id=s.id, urn=s.roll_number, full_name=s.full_name)
+    return InstructorStudentOut(id=s.id, urn=s.roll_number, full_name=s.full_name, is_active=s.is_active)
 
 
 def _quiz_of(exp: Experiment, quiz_type: QuizType) -> Quiz | None:
@@ -147,12 +147,17 @@ def _xlsx_response(
     )
 
 
+def _name_label(row) -> str:
+    """Student name for the Excel downloads; deactivated students are marked Inactive."""
+    return row.full_name if row.is_active else f"{row.full_name} (Inactive)"
+
+
 def _status_rows(batch_id: uuid.UUID, exp: Experiment, db: Session) -> list[InstructorStatusRow]:
     rows = []
     for s in _batch_students(batch_id, db):
         progress = derive_experiment_progress(s.id, [exp], db, student_view=True)
         rows.append(InstructorStatusRow(
-            student_id=s.id, urn=s.roll_number, full_name=s.full_name,
+            student_id=s.id, urn=s.roll_number, full_name=s.full_name, is_active=s.is_active,
             status=progress[0].overall_status,
         ))
     return rows
@@ -163,7 +168,7 @@ def _assignment_rows(batch_id: uuid.UUID, quiz: Quiz | None, db: Session) -> lis
     for s in _batch_students(batch_id, db):
         sub = _submission(s.id, quiz, db) if quiz is not None else None
         rows.append(InstructorAssignmentRow(
-            student_id=s.id, urn=s.roll_number, full_name=s.full_name,
+            student_id=s.id, urn=s.roll_number, full_name=s.full_name, is_active=s.is_active,
             submitted=sub is not None,
             score=sub.score if sub is not None else None,
         ))
@@ -177,7 +182,7 @@ def list_my_batches(db: Session = Depends(get_db), user: User = Depends(_instruc
     batches = (
         db.query(Batch)
         .join(InstructorAssignment, InstructorAssignment.batch_id == Batch.id)
-        .filter(InstructorAssignment.instructor_id == user.id)
+        .filter(InstructorAssignment.instructor_id == user.id, Batch.is_archived == False)  # noqa: E712
         .order_by(Batch.created_at.desc())
         .all()
     )
@@ -255,7 +260,7 @@ def export_experiment_status(
 ):
     batch = _own_batch(batch_id, user, db)
     exp = _published_experiment(experiment_id, db)
-    rows = [[r.urn or "", r.full_name, STATUS_LABEL[r.status]] for r in _status_rows(batch.id, exp, db)]
+    rows = [[r.urn or "", _name_label(r), STATUS_LABEL[r.status]] for r in _status_rows(batch.id, exp, db)]
     return _xlsx_response(
         batch, exp, "status", "Students Status",
         ["URN", "Student Name", "Status"], rows, [16, 40, 22],
@@ -293,7 +298,7 @@ def export_assignment_status(
     if quiz is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "This experiment has no assignment")
     rows = [
-        [r.urn or "", r.full_name, r.score if r.submitted else "Not Submitted"]
+        [r.urn or "", _name_label(r), r.score if r.submitted else "Not Submitted"]
         for r in _assignment_rows(batch.id, quiz, db)
     ]
     return _xlsx_response(

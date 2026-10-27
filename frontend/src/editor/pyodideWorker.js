@@ -13,14 +13,22 @@
  *   { type: "result", output: null, error: string }
  */
 
-// We load Pyodide via importScripts so it's bundled with the worker.
-// The CDN URL is replaced with the npm package at build time via Vite.
-importScripts("https://cdn.jsdelivr.net/pyodide/v0.26.2/full/pyodide.js");
+// Pyodide is loaded from the app's own copy in /pyodide/ (created by `npm run setup:editor`, so student
+// computers do not need the internet). If that copy is missing, the public CDN is used instead.
+const PYODIDE_CDN = "https://cdn.jsdelivr.net/pyodide/v0.26.2/full/";
+let pyodideIndexURL = "/pyodide/";
+try {
+  importScripts(pyodideIndexURL + "pyodide.js");
+} catch (err) {
+  pyodideIndexURL = PYODIDE_CDN;
+  importScripts(pyodideIndexURL + "pyodide.js");
+}
 
 let pyodide = null;
 
 async function initPyodide() {
   pyodide = await loadPyodide({
+    indexURL: pyodideIndexURL,
     stdout: (text) => self.postMessage({ type: "stdout", text }),
     stderr: (text) => self.postMessage({ type: "stdout", text }),
   });

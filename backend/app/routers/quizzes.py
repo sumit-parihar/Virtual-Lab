@@ -3,7 +3,6 @@ Quizzes router — Module 4 (MCQ Engine).
 
 Endpoints:
   POST   /experiments/{experiment_id}/quizzes    create quiz + questions (admin only)
-  GET    /quizzes/{quiz_id}                      get quiz questions (students get no is_correct)
   POST   /quizzes/{quiz_id}/submit               submit answers, get results
 """
 import uuid
@@ -29,17 +28,12 @@ from app.models.student_quiz_progress import StudentQuizProgress
 from app.models.user import UserRole
 from app.schemas.quiz import (
     QuizCreate,
-    QuizOut,
     QuizOutAdmin,
     QuizSubmitRequest,
     QuizSubmitResponse,
     QuizAnswerResult,
 )
-from app.services.progress import (
-    assignment_review,
-    missing_assignment_prerequisites,
-    student_quiz_status,
-)
+from app.services.progress import missing_assignment_prerequisites
 
 router = APIRouter(tags=["quizzes"])
 
@@ -109,38 +103,6 @@ def create_quiz(
 
 
 # ── Get quiz ──────────────────────────────────────────────────────────────────
-
-@router.get("/quizzes/{quiz_id}")
-def get_quiz(
-    quiz_id: uuid.UUID,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-):
-    quiz = _get_quiz_or_404(quiz_id, db)
-    # Admin/instructor see is_correct; students don't
-    if current_user.role in (UserRole.admin, UserRole.instructor):
-        return QuizOutAdmin.model_validate(quiz)
-    # Locked means locked for viewing too: no questions until the earlier steps are done.
-    if quiz.quiz_type == QuizType.assignment:
-        missing = missing_assignment_prerequisites(current_user.id, quiz.experiment, db)
-        if missing:
-            raise HTTPException(
-                status.HTTP_403_FORBIDDEN,
-                "Assignment is locked. Complete these first: " + ", ".join(missing),
-            )
-    out = QuizOut.model_validate(quiz)
-    out.my_submitted, saved_score = student_quiz_status(current_user.id, quiz, db)
-    if quiz.quiz_type == QuizType.assignment:
-        # Assignment scores are immediately visible to the submitting student.
-        out.my_assignment_score = saved_score
-        # Correct answers are revealed only after this student has submitted.
-        out.my_review = assignment_review(current_user.id, quiz, db)
-    else:
-        out.my_best_score = saved_score
-    return out
-
-
-# ── Submit quiz ───────────────────────────────────────────────────────────────
 
 @router.post(
     "/quizzes/{quiz_id}/submit",

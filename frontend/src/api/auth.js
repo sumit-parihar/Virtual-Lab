@@ -6,11 +6,17 @@ export const authApi = {
 
   me: () => api.get("/auth/me").then((r) => r.data),
 
+  // Ends the session on the server. The token is passed in because the caller clears it straight away.
+  logout: (token) =>
+    api.post("/auth/logout", null, { headers: { Authorization: `Bearer ${token}` } }).then((r) => r.data),
+
+  profile: () => api.get("/auth/profile").then((r) => r.data),
+
+  forgotPassword: (email) => api.post("/auth/forgot-password", { email }).then((r) => r.data),
+
+  resetPassword: (token, new_password) =>
+    api.post("/auth/reset-password", { token, new_password }).then((r) => r.data),
+
   changePassword: (current_password, new_password) =>
     api.post("/auth/change-password", { current_password, new_password }).then((r) => r.data),
-
-  createInstructor: (full_name, email, password) =>
-    api.post("/auth/instructors", { full_name, email, password }).then((r) => r.data),
-
-  listUsers: () => api.get("/auth/users").then((r) => r.data),
 };

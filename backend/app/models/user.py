@@ -2,7 +2,7 @@ import enum
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import Boolean, DateTime, Enum, String
+from sqlalchemy import Boolean, DateTime, Enum, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -30,7 +30,15 @@ class User(Base, UUIDPKMixin, TimestampMixin):
     # Every endpoint except login / me / change-password is blocked until it is False.
     must_change_password: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     # When the credentials email was successfully sent. NULL = not sent (yet / failed) -> instructor can re-send.
+    # Sign-in protection: wrong passwords lock the account for a while.
+    failed_login_attempts: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    locked_until: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Raised on logout, password change/reset and admin password reset: older login tokens stop working.
+    token_version: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     credentials_sent_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Result of the last invitation email: "sent", "failed", or "console" (email is switched off and
+    # the temporary password was printed in the server console instead).
+    credentials_status: Mapped[Optional[str]] = mapped_column(String(16), nullable=True)
 
     # relationships
     enrollments = relationship("Enrollment", back_populates="student", foreign_keys="Enrollment.student_id")

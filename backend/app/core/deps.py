@@ -26,11 +26,14 @@ def get_current_user(
     if creds is None:
         raise _unauthorized()
     try:
-        user_id = uuid.UUID(decode_access_token(creds.credentials)["sub"])
+        claims = decode_access_token(creds.credentials)
+        user_id = uuid.UUID(claims["sub"])
     except (JWTError, KeyError, ValueError):
         raise _unauthorized("Invalid or expired token")
     user = db.get(User, user_id)
-    if user is None or not user.is_active:
+    # A token is only valid while it carries the user's current token_version (raised on logout,
+    # password change/reset and admin password reset) and the account is active.
+    if user is None or not user.is_active or claims.get("tv", 0) != user.token_version:
         raise _unauthorized("Invalid or expired token")
     return user
 

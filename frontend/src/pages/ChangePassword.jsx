@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, Navigate, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
 import { authApi } from "../api/auth.js";
 
 export default function ChangePassword() {
-  const { refreshUser } = useAuth();
+  const { user, loading: authLoading, refreshUser } = useAuth();
   const navigate = useNavigate();
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -25,7 +25,9 @@ export default function ChangePassword() {
     }
     setLoading(true);
     try {
-      await authApi.changePassword(currentPassword, newPassword);
+      const result = await authApi.changePassword(currentPassword, newPassword);
+      // Changing the password ends older logins; the server returns a fresh token for this one.
+      if (result?.access_token) localStorage.setItem("access_token", result.access_token);
       await refreshUser();
       navigate("/");
     } catch (err) {
@@ -35,17 +37,23 @@ export default function ChangePassword() {
     }
   }
 
+  if (authLoading) return <div className="page-loading">Loading…</div>;
+  if (!user) return <Navigate to="/login" replace />;
+  const forced = user.must_change_password; // first login with a temporary password
+
   return (
     <div className="auth-container">
       <div className="auth-card">
-        <h1 className="auth-title">Set your password</h1>
+        <h1 className="auth-title">{forced ? "Set your password" : "Change password"}</h1>
         <p className="auth-subtitle">
-          Your account was created with a temporary password. Please set a new one before continuing.
+          {forced
+            ? "Your account was created with a temporary password. Please set a new one before continuing."
+            : "Enter your current password and choose a new one."}
         </p>
         <form onSubmit={handleSubmit} className="auth-form">
           {error && <div className="alert alert--error">{error}</div>}
           <label className="form-label">
-            Current (temporary) password
+            {forced ? "Current (temporary) password" : "Current password"}
             <input
               type="password"
               className="form-input"
@@ -76,8 +84,11 @@ export default function ChangePassword() {
             />
           </label>
           <button type="submit" className="btn btn--primary btn--full" disabled={loading}>
-            {loading ? "Saving…" : "Set password"}
+            {loading ? "Saving…" : forced ? "Set password" : "Change password"}
           </button>
+          {!forced && (
+            <Link to="/profile" className="auth-link">Cancel</Link>
+          )}
         </form>
       </div>
     </div>

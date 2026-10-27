@@ -42,15 +42,15 @@ def test_instructor_sees_only_assigned_batches(client, db):
     db.add(InstructorAssignment(instructor_id=instructor.id, batch_id=mine.id))
     db.commit()
 
-    instructor_ids = {b["id"] for b in client.get("/batches", headers=instructor.headers).json()}
+    instructor_ids = {b["id"] for b in client.get("/instructor/batches", headers=instructor.headers).json()}
     assert instructor_ids == {mine_id}
+    assert client.get(f"/instructor/batches/{mine_id}", headers=instructor.headers).status_code == 200
+    assert client.get(f"/instructor/batches/{other_id}", headers=instructor.headers).status_code == 403
 
-    admin_ids = {b["id"] for b in client.get("/batches", headers=admin.headers).json()}
+    # The admin console lists every batch, and instructors cannot use it.
+    admin_ids = {b["id"] for b in client.get("/admin/batches", headers=admin.headers).json()}
     assert {mine_id, other_id} <= admin_ids
-
-    assert client.get(f"/batches/{mine_id}", headers=instructor.headers).status_code == 200
-    assert client.get(f"/batches/{other_id}", headers=instructor.headers).status_code == 403
-    assert client.get(f"/batches/{other_id}", headers=admin.headers).status_code == 200
+    assert client.get("/admin/batches", headers=instructor.headers).status_code == 403
 
 
 def test_only_students_can_submit_code(client, db):

@@ -118,7 +118,7 @@ def test_batch_detail_lists_students_with_urn_and_name_only(client, db):
     body = client.get(f"/instructor/batches/{batch_id}", headers=me.headers).json()
     assert body["instructor_name"] == "Prof. Rao"
     assert [(s["urn"], s["full_name"]) for s in body["students"]] == [("CS001", "Asha Patil")]
-    assert set(body["students"][0]) == {"id", "urn", "full_name"}  # no email, no extra data
+    assert set(body["students"][0]) == {"id", "urn", "full_name", "is_active"}  # no email, no extra data
     assert "student_count" not in body
 
 
@@ -325,17 +325,17 @@ def test_student_assignment_apis_still_hide_answers_before_submission(client, db
 
 # ── One instructor per batch ──────────────────────────────────────────────────
 
-def test_admin_cannot_give_a_batch_a_second_instructor(client, db):
+def test_a_batch_never_has_two_instructors_even_when_replaced(client, db):
     admin = make_user(db, UserRole.admin)
     first, second = make_user(db, UserRole.instructor), make_user(db, UserRole.instructor)
     batch_id = _batch(db)
 
-    url = f"/batches/{batch_id}/instructors"
-    assert client.post(url, json={"instructor_id": str(first.id)}, headers=admin.headers).status_code == 201
-    assert client.post(url, json={"instructor_id": str(first.id)}, headers=admin.headers).status_code == 201  # idempotent
-    resp = client.post(url, json={"instructor_id": str(second.id)}, headers=admin.headers)
-    assert resp.status_code == 409
-    assert db.query(InstructorAssignment).filter_by(batch_id=batch_id).count() == 1
+    url = f"/admin/batches/{batch_id}/instructor"
+    assert client.put(url, json={"instructor_id": str(first.id)}, headers=admin.headers).status_code == 200
+    assert client.put(url, json={"instructor_id": str(first.id)}, headers=admin.headers).status_code == 200  # no-op
+    assert client.put(url, json={"instructor_id": str(second.id)}, headers=admin.headers).status_code == 200  # replace
+    rows = db.query(InstructorAssignment).filter_by(batch_id=batch_id).all()
+    assert [r.instructor_id for r in rows] == [second.id]
 
 
 def test_one_instructor_can_still_have_several_batches(client, db):
@@ -343,10 +343,10 @@ def test_one_instructor_can_still_have_several_batches(client, db):
     instructor = make_user(db, UserRole.instructor)
     for _ in range(2):
         batch_id = _batch(db)
-        resp = client.post(
-            f"/batches/{batch_id}/instructors", json={"instructor_id": str(instructor.id)}, headers=admin.headers
+        resp = client.put(
+            f"/admin/batches/{batch_id}/instructor", json={"instructor_id": str(instructor.id)}, headers=admin.headers
         )
-        assert resp.status_code == 201
+        assert resp.status_code == 200
     assert len(client.get("/instructor/batches", headers=instructor.headers).json()) == 2
 
 

@@ -26,7 +26,10 @@ servers:
 
 tags:
   - name: auth
-  - name: batches
+  - name: admin
+    description: Admin console (admin only)
+  - name: instructor
+    description: Instructor console (instructors only)
   - name: experiments
     description: Experiment content (Module 3) and guided-lab config (Module 5)
   - name: quizzes
@@ -82,6 +85,10 @@ paths:
               schema: { $ref: "#/components/schemas/Error" }
               example: { detail: "Invalid credentials" }
         "422": { $ref: "#/components/responses/ValidationError" }
+        "429":
+          description: |
+            The account is locked for a while after 5 wrong passwords (the message says how long), or this
+            address sent too many requests. Both include a Retry-After header.
 
   /auth/me:
     get:
@@ -96,6 +103,41 @@ paths:
               schema: { $ref: "#/components/schemas/User" }
         "401": { $ref: "#/components/responses/Unauthorized" }
 
+  /auth/logout:
+    post:
+      tags: [auth]
+      summary: End the session (every earlier login token stops working)
+      responses:
+        "204": { description: Signed out }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /auth/profile:
+    get:
+      tags: [auth]
+      summary: Read-only details for the Profile page (student batch, instructor batches)
+      responses:
+        "200": { description: OK }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /auth/forgot-password:
+    post:
+      tags: [auth]
+      summary: Email a single-use password reset link
+      description: |
+        The reply is always the same, whether or not the email has an account. The link works once and
+        expires in 30 minutes; only a hash of it is stored. At most 3 requests per account per 15 minutes.
+      responses:
+        "200": { description: Always OK }
+
+  /auth/reset-password:
+    post:
+      tags: [auth]
+      summary: Choose a new password with the emailed link
+      responses:
+        "200": { description: Password changed }
+        "400": { description: The link is invalid, used or expired }
+        "422": { description: Password shorter than 8 characters }
+
   /auth/change-password:
     post:
       tags: [auth]
@@ -108,7 +150,9 @@ paths:
             schema: { $ref: "#/components/schemas/ChangePasswordRequest" }
       responses:
         "200":
-          description: Password changed; must_change_password is now false
+          description: |
+            Password changed; must_change_password is now false. The response is the user plus a fresh
+            `access_token`: the old token (and every other device's) stops working.
           content:
             application/json:
               schema: { $ref: "#/components/schemas/User" }
@@ -123,115 +167,183 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
 
-  # ---------------- BATCHES ----------------
-  /batches:
-    post:
-      tags: [batches]
-      summary: Create a batch (Admin only)
-      x-status: implemented
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: "#/components/schemas/BatchCreate" }
-      responses:
-        "201":
-          description: Created
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/Batch" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "403": { $ref: "#/components/responses/Forbidden" }
-        "409":
-          description: A batch with this name + academic_year already exists
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/Error" }
-        "422": { $ref: "#/components/responses/ValidationError" }
+  # ---------------- ADMIN CONSOLE (admin only; instructors and students get 403) ----------------
+  /admin/batches:
     get:
-      tags: [batches]
-      summary: List batches (Admin, Instructor)
-      description: Admins see every batch; an instructor sees only the batches they are assigned to.
-      x-status: implemented
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                type: array
-                items: { $ref: "#/components/schemas/Batch" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "403": { $ref: "#/components/responses/Forbidden" }
-
-  /batches/{batch_id}:
-    get:
-      tags: [batches]
-      summary: Get one batch
-      description: Admins can read any batch; an instructor only a batch they are assigned to (otherwise 403).
-      x-status: implemented
+      tags: [admin]
+      summary: Batches with instructor and student count
       parameters:
-        - $ref: "#/components/parameters/BatchId"
+        - { name: include_archived, in: query, schema: { type: boolean, default: false } }
       responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/Batch" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
+        "200": { description: OK }
         "403": { $ref: "#/components/responses/Forbidden" }
-        "404": { $ref: "#/components/responses/NotFound" }
-
-  /batches/{batch_id}/students:
     post:
-      tags: [batches]
-      summary: Upload/onboard students into a batch
+      tags: [admin]
+      summary: Create a batch (name + academic year); an instructor can be assigned later
+      responses:
+        "201": { description: Created }
+        "409": { description: The batch already exists }
+  /admin/batches/{batch_id}:
+    get:
+      tags: [admin]
+      summary: One batch with its instructor and enrolled students
+      parameters:
+        - { name: batch_id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200": { description: OK }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [admin]
+      summary: Edit the batch name or academic year
+      parameters:
+        - { name: batch_id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200": { description: OK }
+        "409": { description: Another batch already has this name and year }
+  /admin/batches/{batch_id}/instructor:
+    put:
+      tags: [admin]
+      summary: Assign the batch's instructor, or replace the current one in one step
+      description: A batch has at most one instructor. The new instructor keeps any other batches.
+      parameters:
+        - { name: batch_id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200": { description: OK }
+        "409": { description: Archived batch or deactivated instructor }
+    delete:
+      tags: [admin]
+      summary: Remove the batch's instructor (the batch is left without one)
+      parameters:
+        - { name: batch_id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200": { description: OK }
+  /admin/batches/{batch_id}/archive:
+    post:
+      tags: [admin]
+      summary: Archive a batch (hidden from lists and from the instructor; nothing is deleted)
+      parameters:
+        - { name: batch_id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200": { description: OK }
+  /admin/batches/{batch_id}/restore:
+    post:
+      tags: [admin]
+      summary: Restore an archived batch
+      parameters:
+        - { name: batch_id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200": { description: OK }
+  /admin/batches/{batch_id}/students/preview:
+    post:
+      tags: [admin]
+      summary: Check a CSV or Excel student file without changing anything
       description: |
-        For each row: if the email is new, creates a student account with a
-        random password (emailed in the background — see `credentials_sent_at`
-        on the created User) and enrolls them; if the email already has an
-        account, enrolls it in this batch if not already enrolled, and never
-        re-emails. Safe to call again with the same or an overlapping list.
-      x-status: implemented
+        Multipart upload (`file`) with the columns URN, Name and Email. Every row is reported as
+        ready, skipped (already in a batch) or invalid (with a reason).
       parameters:
-        - $ref: "#/components/parameters/BatchId"
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: "#/components/schemas/StudentUploadRequest" }
-            examples:
-              default:
-                value:
-                  students:
-                    - email: student1@college.edu
-                      full_name: Asha Patil
-                      roll_number: "21CS101"
-                    - email: student2@college.edu
-                      full_name: Rohan Shah
+        - { name: batch_id, in: path, required: true, schema: { type: string, format: uuid } }
       responses:
-        "201":
-          description: Rows processed (individual rows may be "already_exists")
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/StudentUploadResponse" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "403":
-          description: Not an instructor, or not the instructor assigned to this batch (admins have no access)
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/Error" }
-        "404": { $ref: "#/components/responses/NotFound" }
-        "409":
-          description: A race with another upload for the same email/roll number
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/Error" }
-        "422":
-          description: Empty list, too many rows (over MAX_UPLOAD_ROWS), or a malformed email
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/Error" }
+        "200": { description: Per-row results }
+        "422": { description: The file cannot be used (type, columns or size) }
+  /admin/batches/{batch_id}/students/import:
+    post:
+      tags: [admin]
+      summary: Add the good rows to the batch and skip the rest
+      description: |
+        New students get a random temporary password by email and must change it at first login.
+        A row whose email is already in another batch is skipped ("use Move student").
+      parameters:
+        - { name: batch_id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "201": { description: Per-row results }
+        "409": { description: Archived batch }
+        "422": { description: The file cannot be used }
+  /admin/students:
+    get:
+      tags: [admin]
+      summary: Students with account state and batch (filter by batch_id, search with q)
+      responses:
+        "200": { description: OK }
+    post:
+      tags: [admin]
+      summary: Add one student (URN, name, email, batch); a temporary password is emailed
+      description: Same checks as a row of the import file.
+      responses:
+        "201": { description: Created }
+        "409": { description: Already in a batch, or the batch is archived }
+        "422": { description: Invalid or duplicate data (email, URN) }
+  /admin/students/template:
+    get:
+      tags: [admin]
+      summary: Excel template with the columns URN, Name, Email
+      responses:
+        "200": { description: .xlsx file }
+  /admin/students/{student_id}:
+    patch:
+      tags: [admin]
+      summary: Edit a student's name, email or URN
+      parameters:
+        - { name: student_id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200": { description: OK }
+        "409": { description: Email or URN already used }
+  /admin/students/{student_id}/move:
+    post:
+      tags: [admin]
+      summary: Move a student to another batch (progress and scores move with them)
+      parameters:
+        - { name: student_id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200": { description: OK }
+        "409": { description: Target batch is archived }
+  /admin/instructors:
+    get:
+      tags: [admin]
+      summary: Instructors with account state and the batches they teach
+      responses:
+        "200": { description: OK }
+    post:
+      tags: [admin]
+      summary: Add an instructor; a temporary password is emailed
+      responses:
+        "201": { description: Created }
+        "409": { description: Email already used }
+  /admin/instructors/{instructor_id}:
+    patch:
+      tags: [admin]
+      summary: Edit an instructor's name or email
+      parameters:
+        - { name: instructor_id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200": { description: OK }
+        "409": { description: Email already used }
+  /admin/users/{user_id}/deactivate:
+    post:
+      tags: [admin]
+      summary: Deactivate a user (cannot log in; records are kept)
+      description: An admin cannot deactivate themselves or the last active admin.
+      parameters:
+        - { name: user_id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200": { description: OK }
+        "409": { description: Not allowed }
+  /admin/users/{user_id}/reactivate:
+    post:
+      tags: [admin]
+      summary: Reactivate a user
+      parameters:
+        - { name: user_id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200": { description: OK }
+  /admin/users/{user_id}/resend-invitation:
+    post:
+      tags: [admin]
+      summary: Issue a new temporary password and email it (never creates another account)
+      parameters:
+        - { name: user_id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200": { description: OK }
+        "409": { description: The account is deactivated }
 
   # ---------------- EXPERIMENTS (planned) ----------------
   /experiments:
@@ -351,29 +463,6 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
         "422": { $ref: "#/components/responses/ValidationError" }
-
-  /quizzes/{quiz_id}:
-    get:
-      tags: [quizzes]
-      summary: Get a quiz's questions and options
-      description: |
-        Never includes `Option.is_correct` for a student caller.
-        A student cannot fetch the `assignment` quiz while it is locked (403).
-      parameters:
-        - $ref: "#/components/parameters/QuizId"
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/Quiz" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "403":
-          description: Student asked for the assignment while it is still locked (the detail lists the steps left)
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/Error" }
-        "404": { $ref: "#/components/responses/NotFound" }
 
   /quizzes/{quiz_id}/submit:
     post:
@@ -763,58 +852,6 @@ components:
         current_password: { type: string }
         new_password: { type: string, minLength: 8 }
       required: [current_password, new_password]
-
-    Batch:
-      type: object
-      properties:
-        id: { type: string, format: uuid }
-        name: { type: string, example: TE-CSE-A }
-        academic_year: { type: string, example: "2026-27" }
-        created_at: { type: string, format: date-time }
-      required: [id, name, academic_year, created_at]
-
-    BatchCreate:
-      type: object
-      properties:
-        name: { type: string, minLength: 1, maxLength: 100 }
-        academic_year: { type: string, minLength: 1, maxLength: 20 }
-      required: [name, academic_year]
-
-    StudentRow:
-      type: object
-      properties:
-        email: { type: string, format: email }
-        full_name: { type: string, minLength: 1, maxLength: 150 }
-        roll_number: { type: string, nullable: true }
-      required: [email, full_name]
-
-    StudentUploadRequest:
-      type: object
-      properties:
-        students:
-          type: array
-          minItems: 1
-          items: { $ref: "#/components/schemas/StudentRow" }
-      required: [students]
-
-    StudentUploadRowResult:
-      type: object
-      properties:
-        email: { type: string }
-        status:
-          type: string
-          enum: [created, already_exists, already_in_batch]
-      required: [email, status]
-
-    StudentUploadResponse:
-      type: object
-      properties:
-        created: { type: integer }
-        skipped: { type: integer }
-        rows:
-          type: array
-          items: { $ref: "#/components/schemas/StudentUploadRowResult" }
-      required: [created, skipped, rows]
 
     Experiment:
       type: object

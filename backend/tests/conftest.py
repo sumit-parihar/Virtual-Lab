@@ -14,6 +14,14 @@ engine = create_engine(
 )
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
+@pytest.fixture(autouse=True)
+def _fresh_rate_limiter():
+    from app.core.ratelimit import auth_limiter
+    auth_limiter.reset()
+    yield
+    auth_limiter.reset()
+
+
 @pytest.fixture(scope="function")
 def db():
     Base.metadata.create_all(bind=engine)

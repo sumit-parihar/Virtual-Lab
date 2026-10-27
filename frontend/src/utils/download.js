@@ -15,3 +15,10 @@ export function excelFileName(batch, experimentNumber, kind) {
   const safe = `${batch.name}_${batch.academic_year}`.replace(/[^A-Za-z0-9_-]+/g, "_");
   return `batch_${safe}_experiment_${experimentNumber}_${kind}.xlsx`;
 }
+
+// Build a CSV file (text) from a header row and rows; every cell is quoted.
+export function csvBlob(header, rows) {
+  const cell = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+  const lines = [header, ...rows].map((r) => r.map(cell).join(","));
+  return new Blob(["\ufeff" + lines.join("\r\n")], { type: "text/csv;charset=utf-8" });
+}

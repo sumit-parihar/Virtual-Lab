@@ -42,7 +42,7 @@
 }
 
 .exp-card:hover {
-  box-shadow: 0 4px 16px rgba(37, 99, 235, 0.12);
+  box-shadow: 0 4px 16px rgba(15, 118, 110, 0.14);
   border-color: var(--color-primary);
   transform: translateY(-2px);
   color: var(--color-text);
@@ -87,4 +87,36 @@
 
 .exp-card:hover .exp-card__arrow {
   opacity: 1;
+}
+
+/* ── Appearance refresh ──────────────────────────────────────────────────── */
+.experiments-page {
+  padding: 0;
+}
+.exp-card {
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  padding: var(--space-2) var(--space-3) var(--space-2) var(--space-2);
+}
+.exp-card:hover {
+  box-shadow: var(--shadow-md);
+}
+.exp-card__index {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.8rem;
+  height: 2.8rem;
+  min-width: 2.8rem;
+  border-radius: 12px;
+  background: var(--color-primary-soft);
+  color: var(--color-primary-dark);
+  font-size: 1.05rem;
+  opacity: 1;
+}
+.exp-card__title {
+  color: var(--color-text);
+}
+.exp-card:hover .exp-card__title {
+  color: var(--color-primary-dark);
 }

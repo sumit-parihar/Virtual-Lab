@@ -15,6 +15,9 @@ class Settings(BaseSettings):
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 480  # 8h, so students aren't logged out mid-lab
     BCRYPT_ROUNDS: int = 10  # ~70ms per hash; keeps a 60-student upload to a few seconds
+    MAX_FAILED_LOGINS: int = 5  # wrong passwords before an account is locked
+    LOCKOUT_MINUTES: int = 15
+    AUTH_RATE_LIMIT_PER_MINUTE: int = 120  # per IP address, for sign-in endpoints (a college may share one IP)
 
     # --- Email (credentials emails) ---
     # EMAIL_ENABLED=false -> nothing is sent; the default password is written to the server log instead (dev only).

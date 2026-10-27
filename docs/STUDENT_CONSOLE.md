@@ -45,7 +45,9 @@ confirms it. A section an experiment does not have is not counted. Section names
 - An optional **problem statement** (set per experiment) is shown above the editor, and an optional **dataset file**
   is made available to the code (for example `pd.read_csv("Salary_dataset.csv")`).
 - The answer is the value of the variable `result`. Submit sends it to the backend, which compares it with the hidden
-  expected result (exact comparison) and shows **Matched** or **Mismatched**. Submitting never ticks the section.
+  expected result (exact comparison). In both cases the student sees their own output and a verdict, **Correct** or
+  **Incorrect** (or an error message if the code failed). The expected result is never shown. Submitting never ticks
+  the section.
 - The section is completed with **Mark Completed**, available at any time, like Theory and Video.
 - Imports are checked against the experiment's allowed libraries.
 
@@ -80,4 +82,5 @@ A table with exactly three columns: **Experiment No.**, **Experiment Name**, **A
 shows the percentage, **Not Submitted**, or **Assignment not Available** if the experiment has no assignment.
 
 ## Profile (`/profile`)
-Read-only: name, email, roll number (students) and role. The final fields are pending (see README, Pending work).
+Read-only: name, email, roll number, batch (with academic year) and role. A **Change password** link opens the password
+form (other devices are signed out when the password changes). Anyone who forgot their password uses "Forgot password?" on the login page.

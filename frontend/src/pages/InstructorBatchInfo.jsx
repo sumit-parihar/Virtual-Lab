@@ -107,7 +107,10 @@ export default function InstructorBatchInfo() {
                   visible.map((s) => (
                     <tr key={s.id}>
                       <td>{s.urn || "—"}</td>
-                      <td>{s.full_name}</td>
+                      <td>
+                        {s.full_name}
+                        {!s.is_active && <span className="badge badge--gray ic-inactive">Inactive</span>}
+                      </td>
                     </tr>
                   ))
                 )}

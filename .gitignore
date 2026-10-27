@@ -17,3 +17,12 @@ ML_Virtual_Lab_Design_Document.docx
 DESIGN_DOC.md
 
 test.db
+
+# Self-hosted editor files (created by `npm run setup:editor`)
+frontend/public/pyodide/
+frontend/public/monaco/
+
+# Playwright
+frontend/test-results/
+frontend/playwright-report/
+

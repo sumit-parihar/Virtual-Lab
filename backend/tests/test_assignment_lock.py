@@ -126,8 +126,6 @@ def test_locked_assignment_is_hidden_from_a_student_with_no_progress(client, db)
     assert _quiz_in(data, "assignment")["questions"] == []  # cannot even be viewed
     assert len(_quiz_in(data, "pre")["questions"]) == 1  # other quizzes stay open
 
-    assignment_id = exp.quizzes["assignment"][0]
-    assert client.get(f"/quizzes/{assignment_id}", headers=student.headers).status_code == 403
     resp = _submit_quiz(client, student, exp, "assignment")
     assert resp.status_code == 403
     assert "locked" in resp.json()["detail"].lower()
@@ -164,8 +162,6 @@ def test_assignment_opens_when_everything_is_done_without_a_code_match(client, d
     assert data["assignment_missing_steps"] == []
     assert len(_quiz_in(data, "assignment")["questions"]) == 1
 
-    assignment_id = exp.quizzes["assignment"][0]
-    assert client.get(f"/quizzes/{assignment_id}", headers=student.headers).status_code == 200
     assert _submit_quiz(client, student, exp, "assignment").status_code == 201
 
 
