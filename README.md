@@ -50,9 +50,8 @@ Backend: http://localhost:8000/docs · Frontend: http://localhost:5173
 cd backend
 source venv/bin/activate
 export PYTHONPATH=.
-python scripts/seed_experiments.py     # 10 experiments with demo content
+python -m scripts.load_experiments     # the ten experiments with their content (see below)
 python scripts/seed_data.py            # admin, instructors, students, batches
-python -m scripts.load_linear_regression   # real content for experiment 8 (see below)
 ```
 Seed credentials created by `seed_data.py`:
 - Admin: `admin@college.edu` / `AdminPass123!`
@@ -62,14 +61,33 @@ Seed credentials created by `seed_data.py`:
 Seeded students have `must_change_password=False` so you can log in immediately.
 
 ### Experiment content
-- `seed_experiments.py` creates the ten experiments with demo content.
-- `scripts/load_linear_regression.py` replaces the demo experiment numbered 8 with the Linear Regression
-  experiment (overview, aim, objectives, video, theory with references, Pre-Quiz, Post-Quiz and Assignment
-  of 10 questions each, and the Code Exercise with its hidden expected result). The text is in
-  `scripts/linear_regression_content.py`; edit it and re-run the loader. Other experiments are not touched.
-- The Code Exercise dataset file lives in `frontend/public/datasets/` (`Salary_dataset.csv`) and is served by the app.
-  The code runner copies it into the browser's Python environment, so students read it with
-  `pd.read_csv("Salary_dataset.csv")`.
+The ten experiments, in this order, are loaded by `python -m scripts.load_experiments`:
+
+| # | Experiment | Code Exercise dataset |
+|---|---|---|
+| 1 | Simple Linear Regression | Salary CSV (`frontend/public/datasets/Salary_dataset.csv`) |
+| 2 | Multiple Linear Regression | Diabetes (built into scikit-learn) |
+| 3 | Logistic Regression | Breast Cancer |
+| 4 | K-Nearest Neighbors (KNN) | Iris |
+| 5 | Naive Bayes Classification | Wine |
+| 6 | Decision Tree Classification | Iris |
+| 7 | Random Forest Classification | Breast Cancer |
+| 8 | Support Vector Machine (SVM) | Wine |
+| 9 | K-Means Clustering | Iris (labels not used) |
+| 10 | Artificial Neural Network (ANN) for Classification | Digits |
+
+- Each experiment has an overview, aim, learning objectives, a video link, theory with references, a Pre-Quiz, a Post-Quiz and an
+  Assignment (10 questions each, no deadline, score shown immediately), and a Code Exercise (problem statement, starter code with
+  `result = None`, allowed libraries and a hidden expected result, checked exactly).
+- The text lives in `backend/scripts/experiment_content/` (one module per experiment). Edit a module and run the loader again.
+  See `docs/EXPERIMENTS.md`.
+- **The loader replaces every existing experiment**, with its quizzes, section completions, code submissions and scores. It is meant for
+  development data. With `ENV=production` it refuses to run unless `--force` is given. Users, batches and enrolments are not touched.
+- Video links are placeholders (`https://example.com/placeholder-video`) until the real ones are provided.
+- Experiment 1 reads `Salary_dataset.csv`, served by the app: the code runner copies the file into the browser's Python environment, so
+  students read it with `pd.read_csv("Salary_dataset.csv")`. The other nine use datasets that ship with scikit-learn.
+- The expected Code Exercise answers are in `expected_results.json`. To recompute them with the same Python that students use, run
+  `npm run compute:expected` in `frontend/` and then the loader again (see `docs/EXPERIMENTS.md`).
 
 ## Upgrading an existing database
 `init_db.py` creates all tables for a new database. For a database created earlier, run the one-off
@@ -189,13 +207,16 @@ These items are not finished yet:
 1. **Home texts**: the student Home text in `frontend/src/content/homeContent.js` is a draft, and the instructor Home text in
    `frontend/src/content/instructorHomeContent.js` is placeholder text. The admin Home shows the general Machine Learning text.
    The final texts are still to be provided.
-2. **Experiment content**: only experiment 8 (Linear Regression) has real content. The other experiments still have the
-   demo content from `seed_experiments.py`, and no Guided Lab content has been added yet.
+2. **Videos and Guided Lab**: the video link of every experiment is a placeholder until the real links are provided, and no
+   Guided Lab content has been added yet.
+3. **Expected answers in the browser Python**: run `npm run compute:expected` once to recompute the Code Exercise answers with the
+   Python that students use, and load them (the stored answers were computed with scikit-learn on the development computer).
 
 ## Documentation
 - `docs/STUDENT_CONSOLE.md` — how the student console works
 - `docs/INSTRUCTOR_CONSOLE.md` — how the instructor console works
 - `docs/ADMIN_CONSOLE.md` — how the admin console works
+- `docs/EXPERIMENTS.md` — the ten experiments and how to change or reload them
 - `docs/GUIDE_STUDENT.md`, `docs/GUIDE_INSTRUCTOR.md`, `docs/GUIDE_ADMIN.md` — short user guides for each role
 - `docs/DEVELOPMENT_HISTORY.md` — what was built, in order
 - `CLAUDE.md` — developer notes and the rules the code follows

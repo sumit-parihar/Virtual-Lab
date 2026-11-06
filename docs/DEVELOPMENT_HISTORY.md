@@ -33,9 +33,8 @@ What was built, in order. Each step that changed the database came with a one-of
 ## Content
 14. **Code Exercise problem statement**: optional `experiments.code_problem_statement`, shown above the editor.
     (`migrate_code_problem_statement`)
-15. **Linear Regression experiment**: loaded as experiment 8 with `scripts/load_linear_regression.py`
-    (Pre-Quiz, Post-Quiz and Assignment of 10 questions each; Code Exercise on the Salary dataset with
-    `random_state=42`, answer stored in `result`).
+15. **First real experiment**: Linear Regression with a Pre-Quiz, Post-Quiz and Assignment of 10 questions each and a Code Exercise
+    on the Salary dataset (`random_state=42`, answer stored in `result`). It is now experiment 1 (see 23).
 16. **Code Exercise by Mark Completed**: the Code Exercise is completed with Mark Completed like Theory and Video and counts
     for every experiment; Submit only shows a verdict, and a code match is no longer needed to unlock the
     Assignment. The editor starts with a minimal snippet (`result = None`). Experiments can name a dataset file
@@ -62,4 +61,8 @@ What was built, in order. Each step that changed the database came with a one-of
 22. **Editor files, tests and loading**: the code editor can use its own copy of Pyodide and Monaco (`npm run setup:editor`), frontend
     unit tests (Vitest) and end-to-end smoke tests (Playwright), pages loaded on demand with shared libraries in their own files, and
     short user guides for each role.
+23. **The ten experiments**: Simple Linear Regression, Multiple Linear Regression, Logistic Regression, KNN, Naive Bayes, Decision Tree,
+    Random Forest, SVM, K-Means and ANN, each with theory, three quizzes of 10 questions and a Code Exercise (exact match, answer in
+    `result`). Loaded with `python -m scripts.load_experiments` from `backend/scripts/experiment_content/`; the old demo experiments and
+    the single-experiment loader were removed. `npm run compute:expected` recomputes the expected answers in the browser Python.
 

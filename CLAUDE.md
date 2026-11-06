@@ -67,8 +67,8 @@ backend/
     config.py    # all env vars, one Settings object
     database.py  # engine/session/Base
     main.py      # FastAPI app + router registration
-  scripts/       # one-off CLI scripts: create_admin, seeders, migrate_*,
-                 # load_linear_regression (+ its content module)
+  scripts/       # one-off CLI scripts: create_admin, seed_data, migrate_*,
+                 # load_experiments + experiment_content/ (the ten experiments)
   tests/         # pytest suite
   requirements.txt / requirements-dev.txt
 frontend/
@@ -188,9 +188,10 @@ The frontend has no automated tests yet; `npm run build` is the minimum check.
   `experiments.code_problem_statement` (optional) is shown above the editor and
   `experiments.code_dataset_url` (optional) names a dataset file that the code runner copies into
   the browser's Python environment under its file name. The expected result is never sent to students.
-- **Experiment content**: `seed_experiments.py` creates demo content; `scripts/load_linear_regression.py`
-  (content in `scripts/linear_regression_content.py`) replaces experiment 8 with the real
-  Linear Regression experiment and is safe to re-run.
+- **Experiment content**: `scripts/experiment_content/` holds one module per experiment (text, quizzes, Code Exercise),
+  a `solutions/` folder and `expected_results.json`. `python -m scripts.load_experiments` deletes ALL experiments
+  (and their progress) and loads the ten; it refuses to run with `ENV=production` without `--force`.
+  `npm run compute:expected` (frontend) recomputes the expected answers in the browser Python.
 - **Experiments are fixed (1-10)**: `order_index` is the experiment number. It must be
   1-10, unique, and cannot be changed after creation (the update schema ignores it).
 - **Experiment status (ticks only)**: Not Attempted (`not_started`) = no section ticked in the database;

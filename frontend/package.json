@@ -10,7 +10,8 @@
     "setup:editor": "node scripts/download-editor-assets.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "compute:expected": "node scripts/compute-expected-results.mjs"
   },
   "dependencies": {
     "@monaco-editor/react": "^4.6.0",
