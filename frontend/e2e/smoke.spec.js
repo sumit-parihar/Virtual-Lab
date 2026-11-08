@@ -57,6 +57,6 @@ test("an admin sees Batches, Instructors and Students", async ({ page }) => {
 test("logging out returns to the login page", async ({ page }) => {
   await signIn(page, "student");
   await page.getByRole("button", { name: /account menu|profile/i }).click();
-  await page.getByRole("button", { name: /log out/i }).click();
+  await page.getByRole("menuitem", { name: /log out/i }).click();
   await expect(page).toHaveURL(/\/login/);
 });
