@@ -1,5 +1,5 @@
 import { Suspense, lazy } from "react";
-import { Routes, Route, Navigate, Outlet } from "react-router-dom";
+import { Routes, Route, Navigate, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "./context/AuthContext.jsx";
 import Layout from "./components/Layout.jsx";
 
@@ -29,9 +29,23 @@ const AdminStudents = lazy(() => import("./pages/AdminStudents.jsx"));
 
 /** Routes that require a logged-in user. Redirects to /login if not. */
 function RequireAuth() {
-  const { user, loading } = useAuth();
+  const { user, loading, connectionError, retry } = useAuth();
+  const location = useLocation();
   if (loading) return <div className="page-loading">Loading…</div>;
-  if (!user) return <Navigate to="/login" replace />;
+  if (connectionError) {
+    return (
+      <div className="page-loading">
+        <p>We could not reach the server. Your login is kept; please try again in a moment.</p>
+        <button type="button" className="btn btn--primary" onClick={retry}>
+          Try again
+        </button>
+      </div>
+    );
+  }
+  if (!user) {
+    const next = location.pathname + location.search;
+    return <Navigate to={next === "/" ? "/login" : `/login?next=${encodeURIComponent(next)}`} replace />;
+  };
   // If still on temporary password, send to change-password page
   if (user.must_change_password) return <Navigate to="/change-password" replace />;
   return <Outlet />;

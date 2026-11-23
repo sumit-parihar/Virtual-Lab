@@ -1,5 +1,7 @@
 """Experiment 4: K-Nearest Neighbors (KNN). Content approved for loading; edit here and re-run `python -m scripts.load_experiments`."""
 
+from .datasets import dataset_info
+
 TITLE = 'K-Nearest Neighbors (KNN)'
 SLUG = 'k-nearest-neighbors'
 
@@ -405,3 +407,79 @@ STARTER_CODE = 'result = None  # store your final answer in this variable\n\n# W
 
 # Solution used to compute the expected result (see solutions/ex04_knn.py).
 SOLUTION_FILE = 'ex04_knn.py'
+
+# "About the dataset" panel (Guided Lab and Code Exercise), data only: see datasets.py.
+DATASET_INFO = dataset_info("iris")
+
+# Guided Lab: data only (no code); the lab is frontend/src/components/guided-labs/KnnLab.jsx.
+# Two features at a time, the Code Exercise's training rows. Accuracies quoted below are the lab's own (equal
+# distances are broken by training order); they were checked against scikit-learn where no tie decides a vote.
+LAB_CONFIG = {
+    "kind": "knn",
+    "intro": (
+        "Each dot is a flower, coloured by its species. Choose k and the distance, and click the plot to place a new "
+        "flower: its k nearest neighbours vote on its species. The shading shows the vote for every spot. Nothing you "
+        "do here is saved."
+    ),
+    "dataset_url": "/datasets/iris.csv",
+    "split_url": "/datasets/iris_split.json",
+    "target_column": "target",
+    "classes": [
+        {"value": 0, "label": "0 = setosa"},
+        {"value": 1, "label": "1 = versicolor"},
+        {"value": 2, "label": "2 = virginica"},
+    ],
+    "feature_pairs": [
+        {"label": "sepal length and sepal width", "x": "sepal length (cm)", "y": "sepal width (cm)",
+         "query": [6.0, 3.0]},
+        {"label": "petal length and petal width", "x": "petal length (cm)", "y": "petal width (cm)",
+         "query": [4.9, 1.6]},
+    ],
+    "k": {"min": 1, "max": 25, "step": 1, "start": 5},
+    "steps": [
+        {
+            "task": "Look at the new flower ◆ and the five lines from it. Count the neighbours of each species and "
+                    "check the result in the vote table.",
+            "explanation": "KNN does not learn a formula. It keeps the training flowers, measures the distance from the "
+                           "new flower to each of them, takes the k closest (here 5) and lets them vote. The species "
+                           "with the most votes wins.",
+        },
+        {
+            "task": "Click a few different places on the plot, including where orange and green dots are mixed.",
+            "explanation": "Where one species dominates, all neighbours agree. Where species overlap the vote is close, "
+                           "and a small move of the new flower can change the result. The shading shows the vote for "
+                           "every spot of the plot.",
+        },
+        {
+            "task": "Set k to 1. Look at the shading and compare training and test accuracy.",
+            "explanation": "With k = 1 each flower follows only its single nearest neighbour, so the boundaries become "
+                           "jagged, with small islands around single flowers. Training accuracy is high (about 93%) but "
+                           "test accuracy drops to about 70%: the model has overfitted the noise. A training score for "
+                           "KNN means little, because each training flower is its own nearest neighbour.",
+        },
+        {
+            "task": "Now set k to 25. What happens to the boundaries and to the test accuracy?",
+            "explanation": "The boundaries become smooth because each vote averages over many flowers. Test accuracy "
+                           "rises to about 90%. If k is made very large, local detail is lost and the model underfits, "
+                           "favouring the most common species.",
+        },
+        {
+            "task": "Look at the accuracy chart. Which k would you choose, and why not the k with the best training "
+                    "accuracy?",
+            "explanation": "The dashed training line is highest for small k, but the solid test line shows how the model "
+                           "does on unseen flowers. A good k is chosen by comparing scores on data not used for "
+                           "training (for example with cross-validation), never by the training score.",
+        },
+        {
+            "task": "Set k back to 5 and switch the distance to Manhattan. Do the boundaries change?",
+            "explanation": "Manhattan distance adds the differences along each axis instead of measuring the straight "
+                           "line, so the region edges change shape slightly and the test accuracy moves a little (about "
+                           "73% instead of about 77%). Euclidean distance is the usual default.",
+        },
+        {
+            "task": "Switch the features to petal length and petal width and try several values of k.",
+            "explanation": "With the petal measurements the three species are far apart, and every test flower is "
+                           "classified correctly for any k. Good features matter more than the exact value of k.",
+        },
+    ],
+}

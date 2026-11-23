@@ -1,23 +1,21 @@
-/* Light top navigation bar: white surface, teal accents. */
+/* Top navigation: white bar, logo mark, links, profile. On phones the links fold into a ☰ menu. */
 .navbar {
   position: sticky;
   top: 0;
   z-index: 40;
-  background: rgba(255, 255, 255, 0.92);
-  backdrop-filter: saturate(1.4) blur(8px);
+  background: var(--color-surface);
   border-bottom: 1px solid var(--color-border);
-  box-shadow: var(--shadow-sm);
 }
 
 .navbar__inner {
+  position: relative;
   max-width: var(--max-width);
   margin: 0 auto;
-  padding: 0.65rem var(--space-3);
+  padding: 0 var(--space-3);
+  min-height: 64px;
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--space-1) var(--space-3);
+  gap: var(--space-4);
 }
 
 .navbar__brand {
@@ -25,129 +23,208 @@
   align-items: center;
   gap: 0.6rem;
   color: var(--color-text);
-  font-size: 1.1rem;
-  font-weight: 700;
-  letter-spacing: -0.01em;
+  flex: none;
 }
 .navbar__brand:hover {
-  color: var(--color-primary-dark);
+  color: var(--color-text);
 }
-/* Decorative logo mark */
-.navbar__brand::before {
-  content: "ML";
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+.navbar__mark {
   width: 2rem;
   height: 2rem;
-  border-radius: 9px;
-  background: linear-gradient(135deg, var(--color-primary) 0%, #14998d 100%);
+  border-radius: 8px;
+  background: var(--color-primary);
   color: var(--color-on-primary);
-  font-size: 0.78rem;
-  font-weight: 800;
-  letter-spacing: 0.02em;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-heading);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+.navbar__name {
+  font-family: var(--font-heading);
+  font-size: 1.08rem;
+  font-weight: 600;
+}
+.navbar__role {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-primary-dark);
+  background: var(--color-primary-soft);
+  padding: 0.15rem 0.5rem;
+  border-radius: 6px;
 }
 
 .navbar__links {
   display: flex;
   align-items: center;
   gap: 0.25rem;
-  flex-wrap: wrap;
+  flex: 1 1 auto;
 }
-
 .navbar__link {
-  color: var(--color-text-muted);
-  padding: 0.4rem 0.9rem;
-  border-radius: 999px;
+  color: #44554f;
+  padding: 0.5rem 0.9rem;
+  border-radius: 8px;
   font-size: 0.92rem;
   font-weight: 500;
-  transition: background 0.12s, color 0.12s;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s;
 }
 .navbar__link:hover {
+  color: var(--color-primary-dark);
   background: var(--color-neutral-soft);
-  color: var(--color-text);
 }
 .navbar__link.active {
-  background: var(--color-primary-soft);
   color: var(--color-primary-dark);
+  background: var(--color-primary-soft);
   font-weight: 600;
 }
 
+.navbar__right {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-left: auto;
+}
+
+/* Profile button and menu */
 .navbar__profile {
   position: relative;
-  margin-left: 0.5rem;
 }
-
-.navbar__avatar {
-  width: 2.2rem;
-  height: 2.2rem;
-  border-radius: 50%;
-  border: 2px solid var(--color-primary-border);
-  background: var(--color-primary);
-  color: var(--color-on-primary);
-  font-weight: 700;
-  font-size: 0.95rem;
+.navbar__profile-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-height: 44px;
+  padding: 0 0.5rem;
+  border: 0;
+  border-radius: var(--radius);
+  background: transparent;
+  font: inherit;
+  color: var(--color-text);
   cursor: pointer;
-  transition: box-shadow 0.15s, background 0.15s;
 }
-.navbar__avatar:hover,
-.navbar__avatar[aria-expanded="true"] {
+.navbar__profile-btn:hover {
+  background: var(--color-neutral-soft);
+}
+.navbar__avatar {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
   background: var(--color-primary-dark);
-  box-shadow: var(--focus-ring);
+  color: var(--color-on-primary);
+  display: grid;
+  place-items: center;
+  font-size: 0.78rem;
+  font-weight: 600;
 }
-
+.navbar__user {
+  font-size: 0.9rem;
+  font-weight: 500;
+  max-width: 14rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .navbar__menu {
   position: absolute;
   right: 0;
-  top: calc(100% + 0.5rem);
-  min-width: 13.5rem;
+  top: calc(100% + 0.4rem);
+  min-width: 13rem;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   box-shadow: var(--shadow-md);
-  padding: 0.35rem;
+  padding: 0.4rem;
   z-index: 50;
 }
-
 .navbar__menu-header {
   display: flex;
   flex-direction: column;
-  padding: 0.55rem 0.75rem 0.65rem;
+  padding: 0.5rem 0.7rem 0.6rem;
   border-bottom: 1px solid var(--color-border);
   margin-bottom: 0.3rem;
-  color: var(--color-text);
   font-size: 0.9rem;
 }
 .navbar__menu-header span {
   color: var(--color-text-muted);
   font-size: 0.8rem;
 }
-
 .navbar__menu-item {
-  display: block;
+  display: flex;
+  align-items: center;
   width: 100%;
-  text-align: left;
-  padding: 0.5rem 0.75rem;
-  border-radius: var(--radius);
+  min-height: 40px;
+  padding: 0 0.7rem;
+  border-radius: 8px;
   color: var(--color-text);
-  font-size: 0.92rem;
+  font-size: 0.9rem;
+  text-align: left;
 }
 .navbar__menu-item:hover {
   background: var(--color-primary-soft);
   color: var(--color-primary-dark);
 }
 .navbar__menu-item--button {
-  border: none;
+  border: 0;
   background: transparent;
-  cursor: pointer;
   font-family: inherit;
+  cursor: pointer;
 }
 
-@media (max-width: 640px) {
+/* ☰ toggle: phones only */
+.navbar__toggle {
+  display: none;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--color-text);
+  cursor: pointer;
+  place-items: center;
+}
+.navbar__toggle:hover {
+  background: var(--color-neutral-soft);
+}
+
+@media (max-width: 760px) {
   .navbar__inner {
-    padding: 0.55rem var(--space-2);
+    padding: 0 0.75rem 0 1rem;
+    min-height: 56px;
+    gap: 0.5rem;
+  }
+  .navbar__toggle {
+    display: grid;
+  }
+  .navbar__user {
+    display: none;
   }
   .navbar__links {
-    width: 100%;
+    display: none;
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 100%;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.15rem;
+    padding: 0.5rem 0.75rem 0.75rem;
+    background: var(--color-surface);
+    border-bottom: 1px solid var(--color-border);
+    box-shadow: var(--shadow-md);
+  }
+  .navbar__links--open {
+    display: flex;
+  }
+  .navbar__link {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+  }
+}
+
+@media (max-width: 380px) {
+  .navbar__role {
+    display: none;
   }
 }

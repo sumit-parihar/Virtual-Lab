@@ -1,5 +1,7 @@
 """Experiment 8: Support Vector Machine (SVM). Content approved for loading; edit here and re-run `python -m scripts.load_experiments`."""
 
+from .datasets import dataset_info
+
 TITLE = 'Support Vector Machine (SVM)'
 SLUG = 'support-vector-machine'
 
@@ -405,3 +407,68 @@ STARTER_CODE = 'result = None  # store your final answer in this variable\n\n# W
 
 # Solution used to compute the expected result (see solutions/ex08_svm.py).
 SOLUTION_FILE = 'ex08_svm.py'
+
+# "About the dataset" panel (Guided Lab and Code Exercise), data only: see datasets.py.
+DATASET_INFO = dataset_info("wine")
+
+# Guided Lab: data only (no code); the lab is frontend/src/components/guided-labs/SvmLab.jsx.
+# Growers 0 and 1 only (an SVM is a two-class method), the Code Exercise's split. Numbers in the steps match
+# scikit-learn's SVC on the same rows, including the number of support vectors.
+LAB_CONFIG = {
+    "kind": "svm",
+    "intro": (
+        "The SVM separates two growers with the widest possible margin. Choose the kernel, C and gamma, switch scaling "
+        "on and off, and watch the boundary, the margin and the support vectors. Nothing you do here is saved."
+    ),
+    "dataset_url": "/datasets/wine.csv",
+    "split_url": "/datasets/wine_split.json",
+    "target_column": "target",
+    "classes": [{"value": 0, "label": "grower 0"}, {"value": 1, "label": "grower 1"}],
+    "feature_pairs": [
+        {"label": "alcohol and proline", "x": "alcohol", "y": "proline"},
+        {"label": "flavanoids and colour intensity", "x": "flavanoids", "y": "color_intensity"},
+    ],
+    "c_values": [0.01, 0.03, 0.1, 0.3, 1, 3, 10, 30, 100],
+    "gamma_values": [0.05, 0.1, 0.2, 0.5, 1, 2, 5, 10, 20],
+    "start": {"kernel": "linear", "c": 1, "gamma": 0.5},
+    "steps": [
+        {
+            "task": "With the linear kernel, find the solid boundary, the two dashed lines and the circled points. "
+                    "How many support vectors are there?",
+            "explanation": "The solid line separates the two growers; the dashed lines are the edges of the margin, the "
+                           "strip the SVM tries to make as wide as possible. The circled wines (17 of the 102) are the "
+                           "support vectors: they lie on or inside the margin and alone decide where the boundary is. "
+                           "Moving any other wine would not change it.",
+        },
+        {
+            "task": "Move C down to 0.01, then up to 100. Watch the margin and the number of support vectors.",
+            "explanation": "C is the cost of a wine inside the margin or on the wrong side. With a small C violations are "
+                           "cheap, so the margin is wide and many wines touch it (72 support vectors): a simpler model "
+                           "that can underfit. With a large C the model tries hard to classify every training wine, so "
+                           "the margin is narrow (12 support vectors) and the model can overfit.",
+        },
+        {
+            "task": "Set C back to 1 and switch the kernel to RBF.",
+            "explanation": "The RBF kernel lets the boundary curve. It acts as if the data were moved into a space with "
+                           "many more dimensions, where a flat boundary separates the classes, without computing the new "
+                           "coordinates (the kernel trick). Training accuracy rises to about 97% with 22 support vectors.",
+        },
+        {
+            "task": "Switch the features to flavanoids and colour intensity. Compare gamma = 0.5 with C = 1 against "
+                    "gamma = 10 with C = 100, then try gamma = 0.05.",
+            "explanation": "A large gamma means each wine influences only its close surroundings, so the boundary wraps "
+                           "around single wines: 100% on the training wines but the test accuracy falls from about 89% "
+                           "to about 86%, an overfitted model. A small gamma makes each wine's influence reach far, so the "
+                           "boundary becomes smooth, almost straight.",
+        },
+        {
+            "task": "Switch back to alcohol and proline, choose RBF with C = 1 and gamma = 0.5, and untick \"Scale the "
+                    "features\".",
+            "explanation": "Proline is in the hundreds while alcohol is around 12 to 15, so without scaling the distance "
+                           "between two wines is almost entirely their difference in proline. The RBF kernel then sees "
+                           "every wine as far from every other: 98 of the 102 wines become support vectors, the training "
+                           "accuracy is 100%, and the test accuracy falls to about 71%. With scaling (learned from the "
+                           "training wines only) it is 100%. Scaling is essential for an SVM.",
+        },
+    ],
+}

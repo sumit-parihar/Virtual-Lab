@@ -40,6 +40,9 @@ class Experiment(Base, UUIDPKMixin, TimestampMixin):
     # "/datasets/Salary_dataset.csv", served by the frontend). The file name is the last path
     # segment, so the student reads it with pd.read_csv("Salary_dataset.csv").
     code_dataset_url: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    # Read-only "About the dataset" panel shown in the Guided Lab and the Code Exercise: the data file,
+    # what one row is, and each column's meaning and role. Data only; sample rows are read from the file.
+    dataset_info: Mapped[Optional[dict]] = mapped_column(CustomJSON, nullable=True)
 
     order_index: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     is_published: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)

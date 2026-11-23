@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { authApi } from "../api/auth.js";
 import { errorMessage } from "../utils/errors.js";
+import AuthAside from "../components/AuthAside.jsx";
 
 // Ask for a reset link. The reply is the same for every email, by design.
 export default function ForgotPassword() {
@@ -26,6 +27,7 @@ export default function ForgotPassword() {
 
   return (
     <div className="auth-container">
+      <AuthAside />
       <div className="auth-card">
         <h1 className="auth-title">Forgot password</h1>
         {sent ? (

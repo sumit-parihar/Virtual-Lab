@@ -1,5 +1,6 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { MemoryRouter } from "react-router-dom";
 import DataTable from "./DataTable.jsx";
 
 const columns = [
@@ -12,18 +13,21 @@ const rows = [
   { id: 3, urn: "CS002", name: "Meera Shah" },
 ];
 
+// The table keeps its search, sort and page in the address, so it needs a router.
 function setup(props = {}) {
   return render(
-    <DataTable
-      columns={columns}
-      rows={rows}
-      rowKey={(r) => r.id}
-      searchText={(r) => `${r.name} ${r.urn}`}
-      searchPlaceholder="Search"
-      emptyMessage="Nothing here"
-      initialSort={{ key: "urn", dir: "asc" }}
-      {...props}
-    />
+    <MemoryRouter>
+      <DataTable
+        columns={columns}
+        rows={rows}
+        rowKey={(r) => r.id}
+        searchText={(r) => `${r.name} ${r.urn}`}
+        searchPlaceholder="Search"
+        emptyMessage="Nothing here"
+        initialSort={{ key: "urn", dir: "asc" }}
+        {...props}
+      />
+    </MemoryRouter>
   );
 }
 
@@ -56,7 +60,7 @@ describe("DataTable", () => {
   it("explains when nothing matches or there are no rows", async () => {
     setup();
     await userEvent.type(screen.getByRole("searchbox"), "zzz");
-    expect(screen.getByText(/no students match your search/i)).toBeInTheDocument();
+    expect(screen.getByText(/nothing matches your search/i)).toBeInTheDocument();
   });
 
   it("shows the empty message when there are no rows", () => {

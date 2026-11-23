@@ -48,6 +48,10 @@ class ExperimentContent:
     starter_code: str
     solution_code: str
     expected_result: Any
+    # Guided Lab settings (data only, see frontend GuidedLab.jsx); None until the experiment's lab is built.
+    lab_config: Optional[dict] = None
+    # "About the dataset" panel (data only); None until written for the experiment.
+    dataset_info: Optional[dict] = None
 
 
 def expected_results() -> dict:
@@ -77,5 +81,7 @@ def load_all() -> list[ExperimentContent]:
             starter_code=m.STARTER_CODE,
             solution_code=(_DIR / "solutions" / m.SOLUTION_FILE).read_text(),
             expected_result=expected[m.SLUG],
+            lab_config=getattr(m, "LAB_CONFIG", None),
+            dataset_info=getattr(m, "DATASET_INFO", None),
         ))
     return experiments

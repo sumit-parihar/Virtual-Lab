@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { authApi } from "../api/auth.js";
 import { errorMessage } from "../utils/errors.js";
+import AuthAside from "../components/AuthAside.jsx";
 
 // Choose a new password with the link from the email.
 export default function ResetPassword() {
@@ -37,6 +38,7 @@ export default function ResetPassword() {
 
   return (
     <div className="auth-container">
+      <AuthAside />
       <div className="auth-card">
         <h1 className="auth-title">Choose a new password</h1>
         {done ? (

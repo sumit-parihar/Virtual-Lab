@@ -197,3 +197,38 @@
 .progress-section__done {
   color: var(--color-primary);
 }
+
+/* Phones: number | title | chevron, status badge under the title; sections not over-indented. */
+@media (max-width: 640px) {
+  .student-dash__title {
+    font-size: 1.5rem;
+  }
+  .student-dash__header .btn {
+    width: 100%;
+  }
+  .progress-item__head {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 0.3rem 0.8rem;
+    padding: 0.8rem 0.9rem;
+  }
+  .progress-item__number {
+    grid-row: 1 / span 2;
+    align-self: start;
+  }
+  .progress-item__title {
+    grid-column: 2;
+  }
+  .progress-item__head .badge {
+    grid-column: 2;
+    grid-row: 2;
+    justify-self: start;
+  }
+  .progress-item__chevron {
+    grid-column: 3;
+    grid-row: 1 / span 2;
+  }
+  .progress-item__sections {
+    padding-left: 1.25rem;
+  }
+}

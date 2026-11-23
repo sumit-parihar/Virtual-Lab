@@ -23,6 +23,7 @@ class ExperimentOut(BaseModel):
     allowed_imports: Optional[list[str]] = None
     code_problem_statement: Optional[str] = None
     code_dataset_url: Optional[str] = None
+    dataset_info: Optional[Any] = None
     order_index: int
     is_published: bool
 
@@ -55,6 +56,7 @@ class ExperimentCreate(BaseModel):
     allowed_imports: Optional[list[str]] = None
     code_problem_statement: Optional[str] = None
     code_dataset_url: Optional[str] = None
+    dataset_info: Optional[Any] = None
     # Experiments are fixed (1-10); the number is chosen once at creation.
     order_index: int = Field(ge=1, le=10)
     is_published: bool = False
@@ -72,6 +74,7 @@ class ExperimentUpdate(BaseModel):
     allowed_imports: Optional[list[str]] = None
     code_problem_statement: Optional[str] = None
     code_dataset_url: Optional[str] = None
+    dataset_info: Optional[Any] = None
     is_published: Optional[bool] = None
 
 

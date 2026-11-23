@@ -67,3 +67,83 @@
 .scores-page__table tbody tr:hover td {
   background: #f8fbfa;
 }
+.scores-page__num {
+  width: 9rem;
+  font-family: var(--font-heading);
+  font-weight: 600;
+  color: var(--color-primary-dark);
+}
+.scores-page__name {
+  font-weight: 500;
+}
+.scores-page__score {
+  width: 13rem;
+}
+
+/* Phones: one card per experiment, number and name on top, score below. */
+@media (max-width: 640px) {
+  .scores-page__title {
+    font-size: 1.5rem;
+  }
+  .scores-page__table-wrap {
+    overflow: visible;
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+  }
+  .scores-page__table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+  }
+  .scores-page__table,
+  .scores-page__table tbody {
+    display: block;
+  }
+  .scores-page__table tr {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 0.35rem 0.75rem;
+    margin-bottom: 0.75rem;
+    padding: 0.95rem 1rem;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 14px;
+    box-shadow: var(--shadow-sm);
+  }
+  .scores-page__table td {
+    display: block;
+    width: auto;
+    padding: 0;
+    border: 0;
+  }
+  .scores-page__table tbody tr:hover td {
+    background: transparent;
+  }
+  .scores-page__num {
+    display: grid !important;
+    place-items: center;
+    width: 2.4rem !important;
+    height: 2.4rem;
+    border-radius: 10px;
+    background: var(--color-primary-soft);
+  }
+  .scores-page__score {
+    grid-column: 1 / -1;
+    display: flex !important;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-top: 0.4rem;
+    padding-top: 0.6rem !important;
+    border-top: 1px solid var(--color-border) !important;
+  }
+  .scores-page__score::before {
+    content: attr(data-label);
+    font-size: 0.8rem;
+    color: var(--color-text-muted);
+  }
+}

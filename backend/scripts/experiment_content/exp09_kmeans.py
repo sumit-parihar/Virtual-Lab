@@ -1,5 +1,7 @@
 """Experiment 9: K-Means Clustering. Content approved for loading; edit here and re-run `python -m scripts.load_experiments`."""
 
+from .datasets import dataset_info
+
 TITLE = 'K-Means Clustering'
 SLUG = 'k-means-clustering'
 
@@ -397,3 +399,86 @@ STARTER_CODE = 'result = None  # store your final answer in this variable\n\n# W
 
 # Solution used to compute the expected result (see solutions/ex09_kmeans.py).
 SOLUTION_FILE = 'ex09_kmeans.py'
+
+# "About the dataset" panel (Guided Lab and Code Exercise), data only: see datasets.py.
+DATASET_INFO = dataset_info(
+    "iris",
+    description=(
+        "150 iris flowers of three species, 50 of each, with four measurements per flower. K-Means uses only the "
+        "four measurements (X). The species column is not used to build the clusters; it can be used afterwards to "
+        "check how well the clusters match the real species. The rows are sorted by species, so the samples below "
+        "are spread through the file."
+    ),
+    load_hint="X, _ = load_iris(return_X_y=True)",
+)
+DATASET_INFO["columns"][-1] = {
+    "name": "target",
+    "meaning": "The species: 0 = setosa, 1 = versicolor, 2 = virginica (only used to check the clusters afterwards)",
+    "unit": "",
+    "role": "unused",
+}
+
+# Guided Lab: data only (no code); the lab is frontend/src/components/guided-labs/KMeansLab.jsx.
+# All 150 flowers, two measurements at a time, no labels. The elbow chart matches scikit-learn's KMeans(n_init=10);
+# the step-by-step view starts from k randomly picked flowers (numbers below are for "start number 1").
+LAB_CONFIG = {
+    "kind": "kmeans",
+    "intro": (
+        "K-Means groups the flowers without knowing their species. Choose k, then step through the algorithm: assign "
+        "every flower to its nearest centroid, move every centroid to the mean of its flowers, and repeat until "
+        "nothing changes. Nothing you do here is saved."
+    ),
+    "dataset_url": "/datasets/iris.csv",
+    "target_column": "target",
+    "species": [
+        {"value": 0, "label": "setosa"},
+        {"value": 1, "label": "versicolor"},
+        {"value": 2, "label": "virginica"},
+    ],
+    "feature_pairs": [
+        {"label": "petal length and petal width", "x": "petal length (cm)", "y": "petal width (cm)"},
+        {"label": "sepal length and sepal width", "x": "sepal length (cm)", "y": "sepal width (cm)"},
+    ],
+    "k": {"min": 1, "max": 8, "start": 3},
+    "steps": [
+        {
+            "task": "The flowers are grey: no cluster yet. The three ✕ are the starting centroids, three flowers picked "
+                    "at random. Click \"Assign points\".",
+            "explanation": "Every flower joins the centroid nearest to it (Euclidean distance) and takes its colour. No "
+                           "species information is used: K-Means is unsupervised.",
+        },
+        {
+            "task": "Click \"Move centroids\". Where does each ✕ go, and what happens to the inertia?",
+            "explanation": "Each centroid jumps to the mean position of the flowers assigned to it; the dashed line "
+                           "shows its path. The inertia (the sum of the squared distances from each flower to its own "
+                           "centroid) goes down: the clusters become tighter.",
+        },
+        {
+            "task": "Keep clicking (assign, move, assign, …) until the status says \"Settled\". How many moves did it "
+                    "take?",
+            "explanation": "With start number 1 the centroids settle after 7 moves, at an inertia of about 31.37. The "
+                           "algorithm stops when assigning the flowers again changes nothing. \"Run to the end\" does "
+                           "all the remaining steps at once.",
+        },
+        {
+            "task": "Tick \"Colour by the real species instead\" and compare with the clusters.",
+            "explanation": "The clusters (48, 50 and 52 flowers) match the three species (50 each) closely: setosa is "
+                           "found exactly, and only a few versicolor and virginica flowers are mixed up. The cluster "
+                           "numbers are just names: cluster 0 need not be species 0. The species were never used by "
+                           "the algorithm; they only serve as a check afterwards.",
+        },
+        {
+            "task": "Look at the elbow chart. Where does the curve stop falling steeply?",
+            "explanation": "The inertia falls from about 551 (k = 1) to 86 (k = 2) and 31 (k = 3), then only slowly "
+                           "(19, 14, …). The bend, or elbow, at k = 3 suggests three groups. Inertia always falls as k "
+                           "grows, so the lowest inertia alone cannot choose k.",
+        },
+        {
+            "task": "Set k to 4 and click \"Run to the end\". Then click \"New starting centroids\" and run again.",
+            "explanation": "With start number 1 the clusters settle at an inertia of about 19.5, but start number 2 "
+                           "ends at about 30.5, a clearly worse grouping. K-Means finds a local best that depends on "
+                           "where it starts. That is why scikit-learn runs it several times (n_init=10) with spread-out "
+                           "k-means++ starting centroids and keeps the best result.",
+        },
+    ],
+}

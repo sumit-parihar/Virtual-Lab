@@ -2,8 +2,9 @@ import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate, useOutletContext, useParams } from "react-router-dom";
 import { instructorApi } from "../api/instructor.js";
 import DataTable from "../components/DataTable.jsx";
+import StatTiles from "../components/StatTiles.jsx";
 import { excelFileName, saveBlob } from "../utils/download.js";
-import { formatScore } from "../utils/format.js";
+import { formatScore, scoreTone } from "../utils/format.js";
 import "./InstructorConsole.css";
 
 // Assignment Status for one experiment: student, saved marks (percentage) or
@@ -75,7 +76,11 @@ export default function InstructorAssignmentStatus() {
       label: "Marks Scored",
       value: (r) => (r.submitted ? r.score : -1),
       render: (r) =>
-        r.submitted ? formatScore(r.score) : <span className="ic-muted">Not Submitted</span>,
+        r.submitted ? (
+          <span className={`score-pill score-pill--${scoreTone(r.score)}`}>{formatScore(r.score)}</span>
+        ) : (
+          <span className="score-pill score-pill--pending">Not Submitted</span>
+        ),
     },
     {
       key: "action",
@@ -114,6 +119,8 @@ export default function InstructorAssignmentStatus() {
 
       {downloadError && <div className="alert alert--error">{downloadError}</div>}
 
+      {table.has_assignment && table.rows.length > 0 && <AssignmentTiles rows={table.rows} />}
+
       {!table.has_assignment ? (
         <div className="ic-empty">No assignment is available for this experiment yet.</div>
       ) : (
@@ -128,5 +135,19 @@ export default function InstructorAssignmentStatus() {
         />
       )}
     </div>
+  );
+}
+
+function AssignmentTiles({ rows }) {
+  const submitted = rows.filter((r) => r.submitted);
+  const average = submitted.length ? submitted.reduce((n, r) => n + (r.score || 0), 0) / submitted.length : null;
+  return (
+    <StatTiles
+      items={[
+        { label: "Submitted", value: `${submitted.length} / ${rows.length}` },
+        { label: "Not Submitted", value: rows.length - submitted.length },
+        { label: "Average marks", value: average === null ? "—" : formatScore(average) },
+      ]}
+    />
   );
 }

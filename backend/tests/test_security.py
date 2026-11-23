@@ -127,6 +127,22 @@ def test_logout_ends_the_login(client, db):
     assert client.get("/auth/me", headers=_bearer(fresh)).status_code == 200
 
 
+def test_a_new_sign_in_ends_the_earlier_one(client, db):
+    # One active session per user: signing in on a second device signs out the first.
+    _, email = _user(db)
+    first = _login(client, email, "Pass12345").json()["access_token"]
+    second = _login(client, email, "Pass12345").json()["access_token"]
+    assert client.get("/auth/me", headers=_bearer(first)).status_code == 401
+    assert client.get("/auth/me", headers=_bearer(second)).status_code == 200
+
+
+def test_a_wrong_password_does_not_end_the_current_session(client, db):
+    _, email = _user(db)
+    token = _login(client, email, "Pass12345").json()["access_token"]
+    assert _login(client, email, "wrong-password").status_code == 401
+    assert client.get("/auth/me", headers=_bearer(token)).status_code == 200
+
+
 def test_changing_the_password_ends_other_logins_but_returns_a_fresh_token(client, db):
     _, email = _user(db)
     old = _login(client, email, "Pass12345").json()["access_token"]

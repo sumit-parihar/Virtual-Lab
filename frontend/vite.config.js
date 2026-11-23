@@ -3,7 +3,8 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
-  server: { port: 5173 },
+  // allowedHosts: lets a Cloudflare quick tunnel (*.trycloudflare.com) reach the dev server for demos.
+  server: { port: 5173, allowedHosts: [".trycloudflare.com"] },
   build: {
     rollupOptions: {
       output: {

@@ -3,10 +3,12 @@ import { adminApi } from "../../api/admin.js";
 import { errorMessage } from "../../utils/errors.js";
 import DataTable from "../DataTable.jsx";
 import Modal from "../Modal.jsx";
+import { useConfirm } from "../ConfirmDialog.jsx";
 import { AccountStatus } from "./AccountBadges.jsx";
 
 // Students with their account state and the admin actions: edit, move, resend invitation, deactivate.
 export default function StudentTable({ students, onChanged, showBatch = false, emptyMessage }) {
+  const confirm = useConfirm();
   const [notice, setNotice] = useState(null); // { type: "success" | "error", text }
   const [editing, setEditing] = useState(null);
   const [moving, setMoving] = useState(null);
@@ -22,17 +24,28 @@ export default function StudentTable({ students, onChanged, showBatch = false, e
     }
   }
 
-  function toggleActive(s) {
+  async function toggleActive(s) {
     if (s.is_active) {
-      if (!window.confirm(`Deactivate ${s.full_name}? They will not be able to log in. Their records are kept.`)) return;
+      const ok = await confirm({
+        title: `Deactivate ${s.full_name}?`,
+        message: "They will not be able to log in. Their records are kept, and you can reactivate them later.",
+        confirmLabel: "Deactivate",
+        danger: true,
+      });
+      if (!ok) return;
       run(() => adminApi.deactivate(s.id), `${s.full_name} was deactivated.`);
     } else {
       run(() => adminApi.reactivate(s.id), `${s.full_name} was reactivated.`);
     }
   }
 
-  function resend(s) {
-    if (!window.confirm(`Send ${s.full_name} a new temporary password by email? Their current password stops working.`)) return;
+  async function resend(s) {
+    const ok = await confirm({
+      title: "Send a new temporary password?",
+      message: `${s.full_name} gets a new temporary password by email. Their current password stops working.`,
+      confirmLabel: "Send password",
+    });
+    if (!ok) return;
     run(() => adminApi.resendInvitation(s.id), (u) =>
       u.invitation === "failed" ? "The email could not be sent." : `A new temporary password was sent to ${u.email}.`
     );

@@ -1,91 +1,153 @@
+/* Code editor: a dark editor card (toolbar, Monaco, status bar), then the output and the Submit verdict. */
 .code-editor {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: 0.85rem;
 }
 
-.code-editor__imports {
-  font-size: 0.85rem;
-  color: var(--color-text-muted);
-  background: var(--color-bg);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  padding: 0.5rem 0.9rem;
-}
-
-.code-editor__monaco {
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
+.code-editor__shell {
+  background: #0f1b19;
+  border-radius: var(--radius-lg);
   overflow: hidden;
 }
 
 .code-editor__toolbar {
   display: flex;
   align-items: center;
-  gap: var(--space-1);
+  justify-content: space-between;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  padding: 0.55rem 0.65rem 0.55rem 1rem;
+  background: #162522;
+  border-bottom: 1px solid #23342f;
 }
-
-.code-editor__status {
-  font-size: 0.85rem;
-  margin-left: auto;
-}
-.code-editor__status--idle    { color: var(--color-text-muted); }
-.code-editor__status--loading,
-.code-editor__status--running { color: var(--color-warning); }
-.code-editor__status--done    { color: var(--color-success); }
-.code-editor__status--error   { color: var(--color-error); }
-
-.code-editor__output {
-  background: #0f172a;
-  border-radius: var(--radius);
-  padding: var(--space-2);
-  color: #e2e8f0;
-}
-
-.code-editor__output-label {
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: #64748b;
-  margin-bottom: 0.5rem;
-}
-
-.code-editor__stdout {
+.code-editor__file {
   font-family: var(--font-mono);
+  font-size: 0.82rem;
+  color: #b9ccc6;
+}
+.code-editor__saved {
+  color: #f1b56a;
+}
+.code-editor__actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.code-editor__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 2.5rem;
+  padding: 0 1rem;
+  border-radius: 9px;
+  border: 0;
+  font: inherit;
   font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.code-editor__btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.code-editor__btn:focus-visible {
+  box-shadow: 0 0 0 3px rgba(94, 234, 212, 0.45);
+}
+.code-editor__btn--quiet {
+  background: transparent;
+  border: 1px solid #3a4f49;
+  color: #d5e3df;
+}
+.code-editor__btn--quiet:hover:not(:disabled) {
+  background: #1f302c;
+}
+.code-editor__btn--run {
+  background: #14b8a6;
+  color: #06201c;
+}
+.code-editor__btn--run:hover {
+  background: #2dd4bf;
+}
+.code-editor__btn--stop {
+  background: #f1b56a;
+  color: #2b1703;
+}
+.code-editor__btn--submit {
+  background: #ffffff;
+  color: var(--color-primary-dark);
+}
+.code-editor__btn--submit:hover:not(:disabled) {
+  background: #e7f3f1;
+}
+
+.code-editor__monaco {
+  background: #1e1e1e;
+}
+
+.code-editor__statusbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  padding: 0.45rem 1rem;
+  background: #162522;
+  border-top: 1px solid #23342f;
+  font-size: 0.78rem;
+  color: #9fb4ae;
+}
+.code-editor__status {
+  font-weight: 600;
+}
+.code-editor__status--idle    { color: #9fb4ae; }
+.code-editor__status--loading,
+.code-editor__status--running { color: #f1b56a; }
+.code-editor__status--done    { color: #5eead4; }
+.code-editor__status--error   { color: #fca5a5; }
+.code-editor__status--stopped { color: #f1b56a; }
+.code-editor__meta {
+  font-family: var(--font-mono);
+}
+
+/* Output */
+.code-editor__output {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+.code-editor__output-label {
+  padding: 0.6rem 1rem;
+  border-bottom: 1px solid var(--color-border);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #44554f;
+}
+.code-editor__stdout {
   margin: 0;
+  padding: 0.85rem 1rem;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  line-height: 1.6;
+  color: var(--color-text-body);
   white-space: pre-wrap;
   word-break: break-word;
+  max-height: 22rem;
+  overflow: auto;
 }
-
 .code-editor__error {
-  color: #f87171;
+  color: #b91c1c;
 }
-
 .code-editor__result {
-  color: #86efac;
+  color: var(--color-primary-dark);
+  font-weight: 600;
 }
 
 .code-editor__note {
   font-size: 0.8rem;
   color: var(--color-text-muted);
   margin: 0;
-}
-
-/* ── Appearance refresh ──────────────────────────────────────────────────── */
-.code-editor__monaco {
-  border-radius: 12px;
-  box-shadow: var(--shadow-sm);
-}
-.code-editor__imports {
-  background: var(--color-primary-soft);
-  border-color: var(--color-primary-border);
-  color: var(--color-primary-dark);
-}
-.code-editor__output {
-  border-radius: 12px;
-  background: #10201f;
 }
 
 .code-editor__verdict-output {

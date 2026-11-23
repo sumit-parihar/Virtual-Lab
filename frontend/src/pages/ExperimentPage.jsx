@@ -1,12 +1,15 @@
 import { useState, useEffect } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { experimentsApi } from "../api/experiments.js";
 import { useAuth } from "../context/AuthContext.jsx";
 import QuizPanel from "../components/QuizPanel.jsx";
 import { SECTION_LABELS } from "../constants/sections.js";
 import GuidedLab from "../components/GuidedLab.jsx";
 import CodeEditor from "../components/CodeEditor.jsx";
-import { simpleMarkdown, toEmbedUrl } from "../utils/contentFormat.js";
+import DatasetPanel from "../components/DatasetPanel.jsx";
+import { simpleMarkdown } from "../utils/contentFormat.js";
+import VideoPlayer from "../components/VideoPlayer.jsx";
+import { shortSectionLabel } from "../utils/progress.js";
 import "./ExperimentPage.css";
 
 // Sidebar sections in the approved order. Keep the same stable section keys so
@@ -28,7 +31,20 @@ export default function ExperimentPage() {
   const { user } = useAuth();
   const isStudent = user?.role === "student";
   const [experiment, setExperiment] = useState(null);
-  const [activeSection, setActiveSection] = useState("overview");
+  // The open section is part of the address (?section=…), so refresh, Back/Forward and shared links keep it.
+  const [params, setParams] = useSearchParams();
+  const requested = params.get("section");
+  const activeSection = SECTIONS.some((s) => s.id === requested) ? requested : "overview";
+  const setActiveSection = (id) => setParams(id === "overview" ? {} : { section: id });
+  // Sections stay mounted once opened (only hidden), so code, quiz answers and lab settings survive tab switches.
+  const [visited, setVisited] = useState(() => new Set([activeSection]));
+  useEffect(() => {
+    setVisited((prev) => (prev.has(activeSection) ? prev : new Set(prev).add(activeSection)));
+  }, [activeSection]);
+  useEffect(() => {
+    setVisited(new Set([activeSection]));
+    // a different experiment starts fresh; activeSection is read only at that moment
+  }, [slug]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [savingSection, setSavingSection] = useState(null);
@@ -129,194 +145,303 @@ export default function ExperimentPage() {
   const assignment = getQuiz("assignment");
   const completions = experiment.section_completions || {};
 
-  const completionControl = (sectionKey) => isStudent ? (
+  const sectionKey = (section) => section.completionKey || section.id;
+  const isComplete = (section) => {
+    if (section.completionKey) return Boolean(completions[section.completionKey]);
+    const quiz = section.id === "pre-quiz" ? preQuiz : section.id === "post-quiz" ? postQuiz : section.id === "assignment" ? assignment : null;
+    return Boolean(quiz?.my_submitted);
+  };
+  const doneCount = SECTIONS.filter(isComplete).length;
+  const currentIndex = SECTIONS.findIndex((s) => s.id === activeSection);
+  const current = SECTIONS[currentIndex];
+  const prev = SECTIONS[currentIndex - 1];
+  const next = SECTIONS[currentIndex + 1];
+  const number = String(experiment.order_index).padStart(2, "0");
+
+  // Mark Completed for the open section (manual sections only; quizzes tick when submitted).
+  const completionControl = (key) => isStudent && key ? (
     <div className="section-completion">
       <button
         type="button"
-        className={`btn ${completions[sectionKey] ? "btn--ghost" : "btn--primary"} section-completion__button`}
-        disabled={Boolean(savingSection) || Boolean(completions[sectionKey])}
-        onClick={() => markSectionCompleted(sectionKey)}
+        className={`btn ${completions[key] ? "btn--ghost" : "btn--primary"} section-completion__button`}
+        disabled={Boolean(savingSection) || Boolean(completions[key])}
+        onClick={() => markSectionCompleted(key)}
       >
-        {savingSection === sectionKey ? "Saving…" : completions[sectionKey] ? "✓ Completed" : "Mark Completed"}
+        {savingSection === key ? "Saving…" : completions[key] ? "✓ Completed" : "Mark Completed"}
       </button>
-      {completions[sectionKey] && <span className="section-completion__status">Saved completion confirmed</span>}
     </div>
   ) : null;
 
   return (
     <div className="exp-page">
-      <aside className="exp-side" aria-label="Experiment sections">
-        <Link to="/experiments" className="exp-side__back">← All experiments</Link>
-        <p className="exp-side__eyebrow">Experiment {String(experiment.order_index).padStart(2, "0")}</p>
-        <ul className="exp-side__list">
-          {SECTIONS.map((section) => {
-            const locked = section.id === "assignment" && isStudent && experiment.assignment_locked;
-            const sectionQuiz = section.id === "pre-quiz"
-              ? preQuiz
-              : section.id === "post-quiz"
-                ? postQuiz
-                : section.id === "assignment"
-                  ? assignment
-                  : null;
-            // Every tick comes from saved backend state: manual sections (including the
-            // Code Exercise) from section_completions, quizzes/assignment from their
-            // saved submission.
-            const complete = section.completionKey
-              ? Boolean(completions[section.completionKey])
-              : Boolean(sectionQuiz?.my_submitted);
-            const active = activeSection === section.id;
-            return (
-              <li key={section.id}>
-                <button
-                  type="button"
-                  className={`exp-side__item ${active ? "exp-side__item--active" : ""} ${locked ? "exp-side__item--locked" : ""}`}
-                  onClick={() => handleSectionSelect(section)}
-                  disabled={checkingAssignment}
-                  aria-current={active ? "page" : undefined}
-                  title={locked ? "Click to see what remains before the assignment unlocks" : undefined}
-                >
-                  <span className="exp-side__status">
-                    {isStudent && (locked ? (
-                      <span role="img" aria-label="Locked">🔒</span>
-                    ) : (
-                      <span
-                        className={`exp-side__dot ${complete ? "exp-side__dot--done" : ""}`}
-                        role="img"
-                        aria-label={complete ? "Completed" : "Not completed"}
-                      />
-                    ))}
-                  </span>
-                  <span className="exp-side__label">{section.label}</span>
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-      </aside>
+      <nav className="exp-crumbs" aria-label="Breadcrumb">
+        <Link to="/experiments">Experiments</Link>
+        <span aria-hidden="true">/</span>
+        <span aria-current="page">Exp {number} · {experiment.title}</span>
+      </nav>
 
-      <div className="exp-main">
-      <div className="exp-page__header">
-        <h1 className="exp-page__title">{experiment.title}</h1>
-      </div>
-
-      {sectionError && <div className="alert alert--error section-completion__error" role="alert">{sectionError}</div>}
-
-      {showLockRequirements && experiment.assignment_locked && (
-        <div className="alert alert--warning exp-page__lock-note" role="status">
-          <strong>Assignment locked.</strong> Complete the following sections first:
-          <ul>
-            {(experiment.assignment_missing_steps || []).map((step) => <li key={step}>{step}</li>)}
-          </ul>
-        </div>
-      )}
-
-      <div className="exp-page__content">
-        {activeSection === "overview" && (
-          <section className="exp-section">
-            <h2 className="exp-section__heading">{experiment.title} — Overview</h2>
-            <p>{experiment.overview || `This experiment introduces the main concepts and practical workflow of ${experiment.title}.`}</p>
-            {completionControl("overview")}
-          </section>
-        )}
-
-        {activeSection === "aim" && (
-          <section className="exp-section">
-            <h2 className="exp-section__heading">Aim / Learning Objectives</h2>
-            <h3>Aim</h3>
-            <p>{experiment.aim}</p>
-            <h3>Learning Objectives</h3>
-            <p>{experiment.objective}</p>
-            {completionControl("aim-objectives")}
-          </section>
-        )}
-
-        {activeSection === "pre-quiz" && (
-          <section className="exp-section">
-            <h2 className="exp-section__heading">Pre-Quiz</h2>
-            {preQuiz ? (
-              <QuizPanel quiz={preQuiz} quizType="pre" experimentNumber={experiment.order_index} experimentTitle={experiment.title} onComplete={refreshExperiment} readOnly={!isStudent} />
-            ) : (
-              <p className="exp-section__placeholder">No pre-quiz available for this experiment yet.</p>
-            )}
-          </section>
-        )}
-
-        {activeSection === "video" && (
-          <section className="exp-section">
-            <h2 className="exp-section__heading">Video</h2>
-            {experiment.video_url ? (
-              <div className="exp-video-wrapper">
-                <iframe
-                  src={toEmbedUrl(experiment.video_url)}
-                  title="Experiment video"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                  className="exp-video"
-                />
+      <div className="exp-layout">
+        <aside className="exp-side" aria-label="Experiment sections">
+          <p className="exp-side__eyebrow">Experiment {number}</p>
+          <p className="exp-side__title">{experiment.title}</p>
+          {isStudent && (
+            <div className="exp-side__progress">
+              <div className="exp-side__progress-row">
+                <span>Progress</span>
+                <strong>{doneCount} / {SECTIONS.length}</strong>
               </div>
-            ) : (
-              <p className="exp-section__placeholder">No video available for this experiment yet.</p>
+              <div className="progress-bar" aria-hidden="true">
+                <span style={{ width: `${Math.round((doneCount / SECTIONS.length) * 100)}%` }} />
+              </div>
+            </div>
+          )}
+          <ol className="exp-side__list">
+            {SECTIONS.map((section) => {
+              const locked = section.id === "assignment" && isStudent && experiment.assignment_locked;
+              // Every tick comes from saved backend state: manual sections (including the Code Exercise) from
+              // section_completions, quizzes/assignment from their saved submission.
+              const complete = isComplete(section);
+              const active = activeSection === section.id;
+              return (
+                <li key={section.id}>
+                  <button
+                    type="button"
+                    className={`exp-side__item ${active ? "exp-side__item--active" : ""} ${locked ? "exp-side__item--locked" : ""}`}
+                    onClick={() => handleSectionSelect(section)}
+                    disabled={checkingAssignment}
+                    aria-current={active ? "page" : undefined}
+                    title={locked ? "Click to see what remains before the assignment unlocks" : undefined}
+                  >
+                    <span className="exp-side__status">
+                      {isStudent && (locked ? (
+                        <svg className="exp-side__lock" role="img" aria-label="Locked" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <rect x="5" y="11" width="14" height="10" rx="2" />
+                          <path d="M8 11V8a4 4 0 0 1 8 0v3" />
+                        </svg>
+                      ) : (
+                        <span
+                          className={`exp-side__dot ${complete ? "exp-side__dot--done" : ""}`}
+                          role="img"
+                          aria-label={complete ? "Completed" : "Not completed"}
+                        >
+                          {complete && (
+                            <svg aria-hidden="true" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M5 12l5 5L20 7" />
+                            </svg>
+                          )}
+                        </span>
+                      ))}
+                    </span>
+                    <span className="exp-side__label">{section.label}</span>
+                  </button>
+                </li>
+              );
+            })}
+          </ol>
+        </aside>
+
+        <div className="exp-main">
+          {/* Phones: the sections become a picker above the content. */}
+          <label className="exp-picker">
+            <span className="sr-only">Section</span>
+            <select
+              className="form-select exp-picker__select"
+              value={activeSection}
+              disabled={checkingAssignment}
+              onChange={(e) => handleSectionSelect(SECTIONS.find((s) => s.id === e.target.value))}
+            >
+              {SECTIONS.map((section, i) => (
+                <option key={section.id} value={section.id}>
+                  {`${i + 1} / ${SECTIONS.length} · ${section.label}`}
+                  {isStudent && isComplete(section) ? " ✓" : ""}
+                  {section.id === "assignment" && isStudent && experiment.assignment_locked ? " (locked)" : ""}
+                </option>
+              ))}
+            </select>
+          </label>
+          {isStudent && (
+            <div className="exp-picker__strip" aria-hidden="true">
+              {SECTIONS.map((section) => (
+                <span
+                  key={section.id}
+                  className={`exp-picker__seg${isComplete(section) ? " exp-picker__seg--done" : ""}${section.id === activeSection ? " exp-picker__seg--current" : ""}`}
+                />
+              ))}
+            </div>
+          )}
+
+          <header className="exp-page__header">
+            <p className="exp-page__eyebrow">
+              Section {currentIndex + 1} of {SECTIONS.length}
+            </p>
+            <h1 className="exp-page__title">{current.label}</h1>
+          </header>
+
+          {sectionError && <div className="alert alert--error section-completion__error" role="alert">{sectionError}</div>}
+
+          {activeSection === "assignment" && isStudent && experiment.assignment_locked && (
+            <div className="alert alert--warning exp-page__lock-note" role="status">
+              <strong>Assignment locked.</strong> Complete the following sections first:
+              <ul>
+                {(experiment.assignment_missing_steps || []).map((step) => <li key={step}>{step}</li>)}
+              </ul>
+            </div>
+          )}
+
+          <div className="exp-page__content">
+            {visited.has("overview") && (
+              <section className="exp-section" hidden={activeSection !== "overview"}>
+                <h2 className="exp-section__title">{experiment.title}</h2>
+                <p>{experiment.overview || `This experiment introduces the main concepts and practical workflow of ${experiment.title}.`}</p>
+              </section>
             )}
-            {completionControl("video")}
-          </section>
-        )}
 
-        {activeSection === "theory" && (
-          <section className="exp-section">
-            <h2 className="exp-section__heading">Theory / Reading Material</h2>
-            {experiment.notes ? (
-              <div className="exp-notes" dangerouslySetInnerHTML={{ __html: simpleMarkdown(experiment.notes) }} />
-            ) : (
-              <p className="exp-section__placeholder">No theory material available for this experiment yet.</p>
+            {visited.has("aim") && (
+              <section className="exp-section" hidden={activeSection !== "aim"}>
+                <h2 className="exp-section__title">Aim</h2>
+                <p>{experiment.aim}</p>
+                <h2 className="exp-section__title">Learning Objectives</h2>
+                <p>{experiment.objective}</p>
+              </section>
             )}
-            <p className="exp-section__intro">References and supplementary reading, when available, are included at the end of this section.</p>
-            {completionControl("theory")}
-          </section>
-        )}
 
-        {activeSection === "guided-lab" && (
-          <section className="exp-section">
-            <h2 className="exp-section__heading">Guided Lab</h2>
-            <p className="exp-section__intro">Explore the visual demonstration and adjust its parameters where available.</p>
-            <GuidedLab labConfig={experiment.lab_config} />
-            {completionControl("guided-lab")}
-          </section>
-        )}
+            {visited.has("pre-quiz") && (
+              <section className="exp-section" hidden={activeSection !== "pre-quiz"}>
+                {preQuiz ? (
+                  <QuizPanel quiz={preQuiz} quizType="pre" experimentNumber={experiment.order_index} experimentTitle={experiment.title} onComplete={refreshExperiment} readOnly={!isStudent} />
+                ) : (
+                  <p className="exp-section__placeholder">No pre-quiz available for this experiment yet.</p>
+                )}
+              </section>
+            )}
 
-        {activeSection === "code-editor" && (
-          <section className="exp-section">
-            <h2 className="exp-section__heading">Code Exercise</h2>
-            <p className="exp-section__intro">Write and run Python code in your browser. Submit shows whether your result matches the expected result. Click Mark Completed when you have finished this exercise.</p>
-            {experiment.code_problem_statement && (
+            {visited.has("video") && (
+              <section className="exp-section" hidden={activeSection !== "video"}>
+                {experiment.video_url ? (
+                  <div className="exp-video-wrapper">
+                    <VideoPlayer url={experiment.video_url} className="exp-video" active={activeSection === "video"} />
+                  </div>
+                ) : (
+                  <p className="exp-section__placeholder">No video available for this experiment yet.</p>
+                )}
+              </section>
+            )}
+
+            {visited.has("theory") && (
+              <section className="exp-section" hidden={activeSection !== "theory"}>
+                {experiment.notes ? (
+                  <div className="exp-notes" dangerouslySetInnerHTML={{ __html: simpleMarkdown(experiment.notes) }} />
+                ) : (
+                  <p className="exp-section__placeholder">No theory material available for this experiment yet.</p>
+                )}
+              </section>
+            )}
+
+            {visited.has("guided-lab") && (
+              <section className="exp-section" hidden={activeSection !== "guided-lab"}>
+                <p className="exp-section__intro">Explore the visual demonstration and adjust its parameters where available.</p>
+                {experiment.dataset_info && <DatasetPanel info={experiment.dataset_info} />}
+                <GuidedLab labConfig={experiment.lab_config} />
+              </section>
+            )}
+
+            {visited.has("code-editor") && (
+              <section className="exp-section exp-section--code" hidden={activeSection !== "code-editor"}>
+                <CodeExerciseLayout experiment={experiment} isStudent={isStudent} />
+              </section>
+            )}
+
+            {visited.has("post-quiz") && (
+              <section className="exp-section" hidden={activeSection !== "post-quiz"}>
+                {postQuiz ? (
+                  <QuizPanel quiz={postQuiz} quizType="post" experimentNumber={experiment.order_index} experimentTitle={experiment.title} onComplete={refreshExperiment} readOnly={!isStudent} />
+                ) : (
+                  <p className="exp-section__placeholder">No post-quiz available for this experiment yet.</p>
+                )}
+              </section>
+            )}
+
+            {visited.has("assignment") && !experiment.assignment_locked && (
+              <section className="exp-section" hidden={activeSection !== "assignment"}>
+                {assignment ? (
+                  <QuizPanel quiz={assignment} quizType="assignment" onComplete={refreshExperiment} readOnly={!isStudent} />
+                ) : (
+                  <p className="exp-section__placeholder">No assignment available for this experiment yet.</p>
+                )}
+              </section>
+            )}
+          </div>
+
+          <nav className="exp-pager" aria-label="Section navigation">
+            {prev ? (
+              <button type="button" className="btn btn--ghost exp-pager__btn" onClick={() => handleSectionSelect(prev)} disabled={checkingAssignment}>
+                <span aria-hidden="true">←</span>
+                <span className="exp-pager__text" aria-hidden="true">{shortSectionLabel(sectionKey(prev))}</span>
+                <span className="sr-only">Previous section: {prev.label}</span>
+              </button>
+            ) : (
+              <span />
+            )}
+            <div className="exp-pager__middle">{completionControl(current.completionKey)}</div>
+            {next ? (
+              <button type="button" className="btn btn--ghost exp-pager__btn" onClick={() => handleSectionSelect(next)} disabled={checkingAssignment}>
+                <span className="exp-pager__text" aria-hidden="true">{shortSectionLabel(sectionKey(next))}</span>
+                <span aria-hidden="true">→</span>
+                <span className="sr-only">Next section: {next.label}</span>
+              </button>
+            ) : (
+              <span />
+            )}
+          </nav>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Code Exercise: the task (problem statement and dataset, as tabs) beside the editor and its output.
+function CodeExerciseLayout({ experiment, isStudent }) {
+  const hasProblem = Boolean(experiment.code_problem_statement);
+  const hasDataset = Boolean(experiment.dataset_info);
+  const [tab, setTab] = useState(hasProblem ? "problem" : "dataset");
+  const tabs = [
+    hasProblem && { id: "problem", label: "Problem" },
+    hasDataset && { id: "dataset", label: "About the dataset" },
+  ].filter(Boolean);
+
+  return (
+    <div className={`code-layout${tabs.length ? "" : " code-layout--single"}`}>
+      {tabs.length > 0 && (
+        <div className="code-layout__task">
+          <div className="code-layout__tabs" role="tablist" aria-label="Exercise information">
+            {tabs.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                role="tab"
+                id={`code-tab-${t.id}`}
+                aria-selected={tab === t.id}
+                aria-controls={`code-panel-${t.id}`}
+                className={`code-layout__tab${tab === t.id ? " code-layout__tab--on" : ""}`}
+                onClick={() => setTab(t.id)}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+          <div className="code-layout__panel" role="tabpanel" id={`code-panel-${tab}`} aria-labelledby={`code-tab-${tab}`}>
+            {tab === "problem" && (
               <div className="exp-notes exp-problem" dangerouslySetInnerHTML={{ __html: simpleMarkdown(experiment.code_problem_statement) }} />
             )}
-            <CodeEditor experiment={experiment} canSubmit={isStudent} />
-            {completionControl("code-exercise")}
-          </section>
-        )}
-
-        {activeSection === "post-quiz" && (
-          <section className="exp-section">
-            <h2 className="exp-section__heading">Post-Quiz</h2>
-            {postQuiz ? (
-              <QuizPanel quiz={postQuiz} quizType="post" experimentNumber={experiment.order_index} experimentTitle={experiment.title} onComplete={refreshExperiment} readOnly={!isStudent} />
-            ) : (
-              <p className="exp-section__placeholder">No post-quiz available for this experiment yet.</p>
-            )}
-          </section>
-        )}
-
-        {activeSection === "assignment" && !experiment.assignment_locked && (
-          <section className="exp-section">
-            <h2 className="exp-section__heading">Assignment</h2>
-            {assignment ? (
-              <QuizPanel quiz={assignment} quizType="assignment" onComplete={refreshExperiment} readOnly={!isStudent} />
-            ) : (
-              <p className="exp-section__placeholder">No assignment available for this experiment yet.</p>
-            )}
-          </section>
-        )}
-      </div>
+            {tab === "dataset" && <DatasetPanel info={experiment.dataset_info} defaultOpen />}
+          </div>
+          <p className="code-layout__hint">
+            Your answer is the value of <code>result</code>. Submit checks it; it does not tick the section.
+          </p>
+        </div>
+      )}
+      <div className="code-layout__editor">
+        <CodeEditor experiment={experiment} canSubmit={isStudent} />
       </div>
     </div>
   );

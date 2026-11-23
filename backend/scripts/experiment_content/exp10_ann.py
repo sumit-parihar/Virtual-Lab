@@ -1,5 +1,7 @@
 """Experiment 10: Artificial Neural Network (ANN) for Classification. Content approved for loading; edit here and re-run `python -m scripts.load_experiments`."""
 
+from .datasets import dataset_info
+
 TITLE = 'Artificial Neural Network (ANN) for Classification'
 SLUG = 'artificial-neural-network'
 
@@ -409,3 +411,73 @@ STARTER_CODE = 'result = None  # store your final answer in this variable\n\n# W
 
 # Solution used to compute the expected result (see solutions/ex10_ann.py).
 SOLUTION_FILE = 'ex10_ann.py'
+
+# "About the dataset" panel (Guided Lab and Code Exercise), data only: see datasets.py.
+DATASET_INFO = dataset_info("digits")
+
+# Guided Lab: data only (no code); the lab is frontend/src/components/guided-labs/NeuralNetworkLab.jsx.
+# Part 1 is the theory's one-neuron example; Part 2 trains a one-hidden-layer network in the browser on the Code
+# Exercise's split (seeded, so the numbers below are repeatable; scikit-learn's MLPClassifier scores alike).
+LAB_CONFIG = {
+    "kind": "neural-network",
+    "intro": (
+        "First play with a single neuron, then train a small neural network on the handwritten digits right here in "
+        "the browser. Change the number of hidden neurons and the learning rate and watch the loss and the accuracy. "
+        "Nothing you do here is saved."
+    ),
+    "dataset_url": "/datasets/digits.csv",
+    "split_url": "/datasets/digits_split.json",
+    "target_column": "target",
+    "neuron": {"inputs": [2, 3], "weights": [0.5, -1], "bias": 1},
+    "hidden_sizes": [1, 2, 4, 8, 16, 32, 64],
+    "hidden_start": 16,
+    "learning_rates": [0.0001, 0.001, 0.01, 0.1, 1],
+    "learning_rate_start": 0.01,
+    "epochs_per_click": 20,
+    "steps": [
+        {
+            "task": "Part 1 starts with the theory's example: inputs (2, 3), weights (0.5, −1) and bias 1. Read z and the "
+                    "output, then switch the activation to sigmoid.",
+            "explanation": "The neuron multiplies each input by its weight and adds the bias: z = 2 × 0.5 + 3 × (−1) + 1 "
+                           "= −1. ReLU gives max(0, −1) = 0; sigmoid squeezes −1 to about 0.27. The activation function "
+                           "is what makes a network more than a linear model.",
+        },
+        {
+            "task": "Move the weights and the bias with ReLU selected. When is the output zero?",
+            "explanation": "The output is zero whenever z is negative and equal to z when it is positive. The weights say "
+                           "how much each input matters; the bias shifts the whole sum up or down.",
+        },
+        {
+            "task": "In Part 2, read how many weights and biases the 16-neuron network has. Before training, what is the "
+                    "test accuracy? Then click \"Train 20 epochs\".",
+            "explanation": "64 × 16 + 16 + 16 × 10 + 10 = 1,210 parameters. With random weights the network is guessing "
+                           "(about 10% for ten digits). During training each epoch does a forward pass, measures the "
+                           "cross-entropy loss, backpropagates it and nudges every weight. The loss falls quickly and "
+                           "the test accuracy reaches about 96%.",
+        },
+        {
+            "task": "Look at the test images and the confusion matrix. Which digits are confused?",
+            "explanation": "Most counts sit on the green diagonal (correct guesses). The few red cells show which digit "
+                           "was taken for which, for example an 8 read as a 1, or a 1 read as a 2. A red frame marks a "
+                           "wrong guess among the sample images.",
+        },
+        {
+            "task": "Set the hidden neurons to 1, 2, 4 and 8, training 20 epochs each time. Compare the test accuracy.",
+            "explanation": "With 1 hidden neuron the network reaches only about 35%, with 2 about 59%, with 4 about 88% "
+                           "and with 8 about 96%; 32 neurons give about 97.5%. Too small a network cannot represent ten "
+                           "different digits (it underfits); the Code Exercise uses 64 neurons and scores 0.98.",
+        },
+        {
+            "task": "With 16 hidden neurons, train with a learning rate of 0.0001, then with 1.",
+            "explanation": "The learning rate is the size of each step. With 0.0001 the steps are tiny: after 20 epochs "
+                           "the loss has hardly fallen and the accuracy is only about 48%. With 1 the steps are far too "
+                           "big: the loss jumps up at first and the accuracy stays lower (about 88%). A moderate rate "
+                           "such as 0.01 learns fast and smoothly.",
+        },
+        {
+            "task": "Set everything back to 16 neurons and 0.01, click \"New random start\" and train again.",
+            "explanation": "The weights start as small random numbers, so each start ends slightly differently. This is "
+                           "why scikit-learn's MLPClassifier has a random_state: it makes the result repeatable.",
+        },
+    ],
+}

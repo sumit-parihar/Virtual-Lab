@@ -101,6 +101,7 @@ python -m scripts.migrate_code_dataset_url           # experiments.code_dataset_
 python -m scripts.migrate_admin_console              # invitation status, archived batches, one batch per student
 python -m scripts.migrate_password_reset             # password_reset_tokens (forgot password)
 python -m scripts.migrate_security                   # sign-in lockout and token version columns on users
+python -m scripts.migrate_dataset_info               # experiments.dataset_info ("About the dataset" panel)
 ```
 `migrate_admin_console` keeps each student's earliest batch if a student is enrolled in more than one and deletes
 the other enrolments (no backup).
@@ -134,6 +135,9 @@ experiment, add it to `PACKAGES` in `frontend/scripts/download-editor-assets.mjs
   default because a college may share one address). This limit is kept in memory per server process.
 - **Old logins end:** logging out, changing or resetting a password, an admin resetting a password and deactivating an account all
   stop earlier login tokens from working (`users.token_version`). Logging out signs out every device of that user.
+- **One session per user:** a new sign-in ends the earlier one (the other device or browser is signed out). The signed-out page
+  says the session has ended and, after signing in again, returns to the page that was open (`/login?next=…`, same-site paths only).
+  A wrong password does not end the current session. Network or server errors never sign anyone out; only a 401 does.
 - **API docs:** `/docs`, `/redoc` and `/openapi.json` are switched off when `ENV=production`.
 
 ## Pre-commit (run once per clone, in repo root)
@@ -207,8 +211,8 @@ These items are not finished yet:
 1. **Home texts**: the student Home text in `frontend/src/content/homeContent.js` is a draft, and the instructor Home text in
    `frontend/src/content/instructorHomeContent.js` is placeholder text. The admin Home shows the general Machine Learning text.
    The final texts are still to be provided.
-2. **Videos and Guided Lab**: the video link of every experiment is a placeholder until the real links are provided, and no
-   Guided Lab content has been added yet.
+2. **Videos**: the video link of every experiment is a placeholder until the real links are provided. (The Guided Lab and the
+   "About the dataset" panel are built for all ten experiments; see `docs/EXPERIMENTS.md`.)
 3. **Expected answers in the browser Python**: run `npm run compute:expected` once to recompute the Code Exercise answers with the
    Python that students use, and load them (the stored answers were computed with scikit-learn on the development computer).
 

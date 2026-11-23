@@ -314,7 +314,8 @@ button.ic-sidebar__note {
   overflow: hidden;
   background: #000;
 }
-.ic-video iframe {
+.ic-video iframe,
+.ic-video video {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -385,77 +386,462 @@ button.ic-sidebar__note {
   background: var(--color-error-soft);
 }
 
-/* ── Appearance refresh ──────────────────────────────────────────────────── */
+/* ── Appearance (redesign) ─────────────────────────────────────────────── */
 .ic-page__title {
-  letter-spacing: -0.02em;
+  font-size: 1.75rem;
+  letter-spacing: -0.01em;
+}
+.ic-header .ic-page__title {
+  font-size: 1.55rem;
+  margin: 0;
+}
+.ic-header {
+  align-items: center;
+  margin-bottom: 1rem;
+}
+.ic-section-title {
+  font-family: var(--font-heading);
+  font-weight: 600;
+}
+.ic-back {
+  font-weight: 500;
 }
 .ic-empty {
   border-radius: var(--radius-lg);
-  background: var(--color-surface);
+  border-color: var(--color-border-strong);
 }
+
+/* Batch cards */
 .ic-batch-card {
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
 }
 .ic-batch-card:hover {
   box-shadow: var(--shadow-md);
+  border-color: var(--color-primary-border);
 }
 .ic-batch-card__banner {
-  background: linear-gradient(135deg, var(--color-primary) 0%, #14998d 100%);
-  padding: 2.25rem var(--space-2) var(--space-2);
+  background: #0b3b37;
+  font-family: var(--font-heading);
+  font-weight: 600;
+  padding: 2rem 1.25rem 1.1rem;
+}
+
+/* Workspace sidebar */
+.ic-workspace {
+  grid-template-columns: 250px minmax(0, 1fr);
+  gap: 1.5rem;
 }
 .ic-sidebar {
   position: sticky;
-  top: 5rem; /* below the sticky navbar */
+  top: 80px; /* below the sticky navbar */
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
+  padding: 1.1rem;
+}
+.ic-sidebar__batch strong {
+  font-family: var(--font-heading);
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+.ic-sidebar__link,
+.ic-sidebar__group {
+  min-height: 2.5rem;
+  display: flex;
+  align-items: center;
 }
 .ic-sidebar__link:hover,
 .ic-sidebar__sublink:hover {
-  background: var(--color-primary-soft);
-  color: var(--color-primary-dark);
+  background: var(--color-neutral-soft);
+  color: var(--color-text);
 }
-.ic-sidebar__link.active {
-  background: var(--color-primary-soft);
-  color: var(--color-primary-dark);
-  box-shadow: inset 3px 0 0 var(--color-primary);
-}
+.ic-sidebar__link.active,
 .ic-sidebar__sublink.active {
   background: var(--color-primary-soft);
   color: var(--color-primary-dark);
 }
+
+/* Number tiles */
+.ic-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr));
+  gap: 0.85rem;
+  margin: 0 0 1rem;
+}
+.ic-stats__tile {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  padding: 0.9rem 1.1rem;
+}
+.ic-stats__label {
+  font-size: 0.82rem;
+  color: var(--color-text-muted);
+  margin-bottom: 0.3rem;
+}
+.ic-stats__value {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: 1.55rem;
+  font-weight: 600;
+}
+
+/* Tables (also used by the admin pages) */
+.ic-search {
+  max-width: 360px;
+  margin-bottom: 0.85rem;
+}
 .ic-table-wrap {
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
+}
+.ic-table th,
+.ic-table td {
+  padding: 0.75rem 1rem;
+  border-bottom-color: #edf2f0;
 }
 .ic-table th {
-  font-size: 0.78rem;
+  background: #f8fbfa;
+  border-bottom: 1px solid var(--color-border);
+  font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+.ic-sort {
+  font-weight: 600;
+  color: var(--color-text-muted);
+  min-height: 1.75rem;
+}
+.ic-sort:hover {
+  color: var(--color-primary-dark);
+}
+.ic-table td {
+  font-size: 0.92rem;
 }
 .ic-table tbody tr:hover td {
   background: #f8fbfa;
 }
-.ic-tab {
-  font-weight: 500;
+.ic-pager {
+  margin-top: 0.75rem;
 }
-.ic-quiz__option {
-  border-radius: 10px;
+
+/* Tabs on the instructor experiment page */
+.ic-tab {
+  min-height: 2.5rem;
+  padding: 0 1rem;
+  font-weight: 500;
+  border-color: var(--color-border-strong);
+}
+.ic-section {
+  padding: 1.75rem;
+}
+.ic-section__heading {
+  font-weight: 600;
+}
+.ic-notes {
+  color: var(--color-text-body);
+  line-height: 1.7;
+  max-width: 78ch;
+}
+.ic-notes ol,
+.ic-notes ul {
+  padding-left: 1.4rem;
+}
+/* Answer key and submission review: same look as the student quiz
+   (question cards, lettered option cards, correct in green, student's wrong answer in red). */
+.ic-quiz {
+  list-style: none;
+  padding-left: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.ic-quiz__question {
+  margin: 0;
+  padding: 1.1rem 1.25rem 1.25rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+}
+.ic-quiz__question--correct {
+  border-left: 4px solid var(--color-success);
+}
+.ic-quiz__question--wrong {
+  border-left: 4px solid var(--color-error);
+}
+.ic-quiz__head {
+  align-items: center;
+}
+.ic-quiz__num {
+  margin: 0 0 0.35rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-primary);
 }
 .ic-quiz__text {
   color: var(--color-text);
+  font-size: 1rem;
+  line-height: 1.5;
+  margin-bottom: 0.85rem;
+  overflow-wrap: anywhere;
+}
+.ic-quiz__option {
+  justify-content: flex-start;
+  gap: 0.8rem;
+  min-height: 3rem;
+  padding: 0.55rem 0.9rem 0.55rem 0.65rem;
+  border: 1.5px solid var(--color-border-strong);
+  border-radius: 12px;
+}
+.ic-quiz__option--correct {
+  border-color: var(--color-success);
+}
+.ic-quiz__option--wrong {
+  border-color: var(--color-error);
+}
+.ic-quiz__key {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 1.9rem;
+  height: 1.9rem;
+  border-radius: 50%;
+  border: 1.5px solid var(--color-border-strong);
+  background: var(--color-bg);
+  color: var(--color-text-muted);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+.ic-quiz__option--correct .ic-quiz__key {
+  background: var(--color-success);
+  border-color: var(--color-success);
+  color: #fff;
+}
+.ic-quiz__option--wrong .ic-quiz__key {
+  background: var(--color-error);
+  border-color: var(--color-error);
+  color: #fff;
+}
+.ic-quiz__label {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.ic-quiz__tags {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.ic-info__score {
+  align-self: flex-start;
+  margin-top: 0.2rem;
 }
 .ic-info {
   background: var(--color-surface);
 }
 
 @media (max-width: 760px) {
+  /* One column on phones. This must come after the desktop rule above (250px sidebar),
+     which otherwise wins and pushes the content off the screen. */
+  .ic-workspace {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1rem;
+  }
   .ic-sidebar {
     position: static;
+  }
+  .ic-section {
+    padding: 1.25rem;
+  }
+  .ic-header .ic-page__title {
+    font-size: 1.3rem;
+  }
+  .ic-header .btn {
+    width: 100%;
+  }
+  .ic-search {
+    max-width: none;
+  }
+  /* Stat tiles side by side (3 fit at 360px) instead of one full-width card each. */
+  .ic-stats {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 6.2rem), 1fr));
+    gap: 0.6rem;
+  }
+  .ic-stats__tile {
+    padding: 0.75rem 0.8rem;
+  }
+  .ic-stats__label {
+    font-size: 0.75rem;
+  }
+  .ic-stats__value {
+    font-size: 1.3rem;
+  }
+  /* Tabs scroll sideways in one row instead of stacking into several lines. */
+  .ic-tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    margin-left: -1rem;
+    margin-right: -1rem;
+    padding: 0 1rem 0.25rem;
+    scrollbar-width: none;
+  }
+  .ic-tab {
+    flex: none;
+  }
+  .ic-quiz__question {
+    padding: 0.95rem 0.9rem 1rem;
+  }
+  .ic-quiz__option {
+    flex-wrap: wrap;
+  }
+  /* Tags drop under the option text, aligned with it, and may wrap. */
+  .ic-quiz__option > .badge,
+  .ic-quiz__tags {
+    margin-left: calc(1.9rem + 0.8rem);
+  }
+  .ic-quiz__tags {
+    flex: 1 1 calc(100% - 2.7rem);
+    flex-shrink: 1;
+    min-width: 0;
+    justify-content: flex-start;
   }
 }
 
 .ic-inactive {
   margin-left: 0.5rem;
   vertical-align: middle;
+}
+
+/* ── DataTable toolbar and phone cards (instructor + admin tables) ─────────── */
+.ic-table-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-bottom: 0.85rem;
+}
+.ic-table-tools .ic-search {
+  margin-bottom: 0;
+}
+.ic-sort-select {
+  display: none;
+}
+/* Action buttons stay on one line on desktop instead of wrapping into tall rows. */
+.ic-td--action .admin-actions {
+  flex-wrap: nowrap;
+}
+.ic-td--action {
+  white-space: nowrap;
+}
+/* Desktop: short values (names, URNs, batches) stay on one line; the table scrolls if needed.
+   Only the account-status note may wrap. */
+@media (min-width: 641px) {
+  .ic-table td {
+    white-space: nowrap;
+  }
+  .ic-table td .admin-status__note {
+    white-space: normal;
+    display: block;
+  }
+}
+
+@media (max-width: 640px) {
+  .ic-table-tools {
+    flex-direction: column;
+  }
+  .ic-sort-select {
+    display: block;
+  }
+  .ic-table-wrap {
+    overflow: visible;
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+  }
+  .ic-table,
+  .ic-table tbody {
+    display: block;
+  }
+  .ic-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+  }
+  /* One card per row: label on the left, value on the right; actions full width below. */
+  .ic-table tbody tr {
+    display: block;
+    margin-bottom: 0.75rem;
+    padding: 0.4rem 1rem 0.9rem;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 14px;
+    box-shadow: var(--shadow-sm);
+  }
+  .ic-table tbody tr:hover td {
+    background: transparent;
+  }
+  .ic-table td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.55rem 0;
+    border-bottom: 1px solid #edf2f0;
+    text-align: right;
+    overflow-wrap: anywhere;
+  }
+  .ic-table td::before {
+    content: attr(data-label);
+    flex: none;
+    max-width: 45%;
+    text-align: left;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--color-text-muted);
+  }
+  .ic-table td > * {
+    min-width: 0;
+  }
+  .ic-table td.ic-td--first {
+    font-family: var(--font-heading);
+    font-weight: 600;
+  }
+  .ic-table td.ic-td--action {
+    display: block;
+    border-bottom: 0;
+    padding-top: 0.75rem;
+    white-space: normal;
+    text-align: left;
+  }
+  .ic-table td.ic-td--action::before {
+    content: none;
+  }
+  .ic-td--action .admin-actions {
+    flex-wrap: wrap;
+  }
+  .ic-td--action .btn,
+  .ic-td--action .ic-tip {
+    flex: 1 1 auto;
+  }
+  .ic-td--action .ic-tip,
+  .ic-td--action .ic-tip .btn,
+  .ic-td--action > .btn {
+    width: 100%;
+  }
+  .ic-table td.ic-table__empty {
+    display: block;
+    text-align: center;
+    border: 0;
+  }
+  .ic-table td.ic-table__empty::before {
+    content: none;
+  }
+  .ic-pager {
+    flex-direction: column;
+    align-items: stretch;
+    text-align: center;
+  }
+  .ic-pager__buttons {
+    justify-content: space-between;
+  }
 }

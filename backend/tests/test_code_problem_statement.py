@@ -13,6 +13,17 @@ def test_problem_statement_is_returned_to_students(client, db):
     assert body["code_problem_statement"] == "Use random_state=42. Store the answer in `result`."
 
 
+def test_dataset_panel_is_returned_to_students(client, db):
+    exp = make_experiment(db)
+    info = {"name": "Salary dataset", "file_url": "/datasets/Salary_dataset.csv", "columns": []}
+    db.get(Experiment, exp.id).dataset_info = info
+    db.commit()
+    student = make_user(db, UserRole.student)
+
+    body = client.get(f"/experiments/{exp.slug}", headers=student.headers).json()
+    assert body["dataset_info"] == info
+
+
 def test_problem_statement_is_optional(client, db):
     exp = make_experiment(db)
     student = make_user(db, UserRole.student)

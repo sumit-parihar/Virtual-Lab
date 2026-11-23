@@ -6,23 +6,46 @@ const AuthContext = createContext(null);
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true); // true while hydrating from localStorage
+  const [connectionError, setConnectionError] = useState(false); // the server could not be reached
 
-  // On mount: restore session from localStorage
-  useEffect(() => {
+  // Restore the session from localStorage. Only a 401 (login no longer valid) signs the user out; a network
+  // or server error keeps the login so the user can retry once the server is back.
+  const restore = useCallback(() => {
     const token = localStorage.getItem("access_token");
     if (!token) {
+      setUser(null);
+      setConnectionError(false);
       setLoading(false);
       return;
     }
+    setLoading(true);
     authApi
       .me()
-      .then((u) => setUser(u))
-      .catch(() => {
-        // Token is invalid or expired — clear it
-        localStorage.removeItem("access_token");
+      .then((u) => {
+        setUser(u);
+        setConnectionError(false);
+      })
+      .catch((err) => {
+        if (err.response?.status === 401) {
+          localStorage.removeItem("access_token");
+          setUser(null);
+        } else {
+          setConnectionError(true);
+        }
       })
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(restore, [restore]);
+
+  // Keep every open tab in step: signing out (or in) in one tab updates the others.
+  useEffect(() => {
+    const onStorage = (e) => {
+      if (e.key === "access_token") restore();
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, [restore]);
 
   const login = useCallback(async (email, password) => {
     const data = await authApi.login(email, password);
@@ -46,7 +69,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, refreshUser }}>
+    <AuthContext.Provider value={{ user, loading, connectionError, retry: restore, login, logout, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );

@@ -50,6 +50,11 @@ confirms it. A section an experiment does not have is not counted. Section names
   the section.
 - The section is completed with **Mark Completed**, available at any time, like Theory and Video.
 - Imports are checked against the experiment's allowed libraries.
+- **Stop** ends a run at any time, and a run is stopped automatically after 60 seconds (for example an endless loop);
+  the next Run starts a fresh Python. The code is saved in the browser for each student and experiment, so it survives
+  a refresh; **Reset to starter code** brings back the original snippet (after a confirmation).
+- The open section is part of the address (`?section=code-editor`), so refresh and Back keep it, and switching
+  sections keeps code, quiz answers and Guided Lab settings. The "About the dataset" panel starts closed.
 
 ## Assignment
 - One accepted submission per student; a second attempt is rejected.

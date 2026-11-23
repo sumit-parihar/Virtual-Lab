@@ -70,6 +70,8 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid credentials")
 
     _clear_lockout(user)
+    # One active session per user: a new sign-in ends every earlier one (other devices are signed out).
+    user.token_version += 1
     db.commit()
     token = create_access_token(user.id, user.role.value, user.token_version)
     return TokenResponse(access_token=token, must_change_password=user.must_change_password)

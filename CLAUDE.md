@@ -192,6 +192,10 @@ The frontend has no automated tests yet; `npm run build` is the minimum check.
   a `solutions/` folder and `expected_results.json`. `python -m scripts.load_experiments` deletes ALL experiments
   (and their progress) and loads the ten; it refuses to run with `ENV=production` without `--force`.
   `npm run compute:expected` (frontend) recomputes the expected answers in the browser Python.
+  A module may also define `LAB_CONFIG` (Guided Lab) and `DATASET_INFO` (the read-only "About the dataset" panel in the
+  Guided Lab and Code Exercise). Both are **data only, never code**: the lab for each `kind` is a React component in
+  `frontend/src/components/guided-labs/`, and the panel reads its sample rows from the dataset file. Neither adds a
+  sidebar section or changes Mark Completed. See `docs/EXPERIMENTS.md`.
 - **Experiments are fixed (1-10)**: `order_index` is the experiment number. It must be
   1-10, unique, and cannot be changed after creation (the update schema ignores it).
 - **Experiment status (ticks only)**: Not Attempted (`not_started`) = no section ticked in the database;
@@ -214,17 +218,31 @@ The frontend has no automated tests yet; `npm run build` is the minimum check.
 
 
 ## UI styling
-The look of the app is defined by the CSS variables in `frontend/src/styles/global.css`
-(teal-green palette, radii, shadows, font stack). Change the colours there and every page
-follows. Shared pieces (buttons, forms, cards, badges, tables, alerts, login card) are in the
-same file; the navbar is `components/Navbar.css`. Page stylesheets end with an "Appearance
-refresh" block. Styling changes do not touch behaviour, text or routes. No UI or icon
-packages are used.
+The look is defined by the CSS variables in `frontend/src/styles/global.css` (teal palette with an amber accent for
+"next up" / "in progress", radii, shadows; fonts Inter for text, Space Grotesk for headings, JetBrains Mono for code,
+loaded from Google Fonts in `index.html` with system fallbacks). Change the tokens there and every page follows.
+Shared pieces live in the same file: buttons, forms, badges, alerts, `.progress-bar`, the dialog (`.modal*`), the
+split sign-in layout (`AuthAside` panel + `.auth-card`). The navbar is `components/Navbar.css` (links fold into a ☰ menu
+below 760px). Confirmations use `useConfirm()` from `components/ConfirmDialog.jsx`, never `window.confirm`.
+Student Home is a dashboard (continue card, counts, experiments) built from `GET /experiments` + `GET /dashboards/student`
+via `utils/progress.js`; instructors and admins see the general Home content. The experiment page has a progress
+sidebar, a Previous / Mark Completed / Next bar (fixed at the bottom on phones, where the sidebar becomes a section
+picker) and a side-by-side Code Exercise (Problem / About the dataset tabs beside the editor). No UI or icon packages
+are used (icons are inline SVG).
 
 ## Security notes
 - Sign-in lockout and token versioning are in `app/routers/auth.py` and `app/core/deps.py`; the per-IP limiter is
   `app/core/ratelimit.py` (in memory, per process). Tests reset it in `tests/conftest.py`.
-- Anything that should end a user's logins bumps `users.token_version` (logout, password change/reset, admin reset, deactivation).
+- Anything that should end a user's logins bumps `users.token_version` (login, logout, password change/reset, admin reset, deactivation).
+  Bumping it on login gives **one active session per user**: a new sign-in signs out the earlier one. The frontend signs out
+  only on a 401 (not on network/server errors) and sends the user to `/login?next=…` with a session-ended notice.
 - `GET /quizzes/{quiz_id}` was removed (nothing used it); quiz data reaches students only through `GET /experiments/{slug}` and
   instructors through `/instructor/*`.
 - API docs are off when `ENV=production` (`create_app` in `app/main.py`).
+
+## Page state in the address
+Open sections/tabs, table search/sort/page and admin filters live in the URL (`useSearchParams` / `utils/useUrlParams.js`),
+so refresh, Back and shared links keep them. Experiment sections stay mounted once opened (hidden with `hidden`), so code,
+quiz answers and lab settings survive tab switches. Code Exercise drafts are saved per user and experiment in localStorage
+(`ml-lab:code:<user>:<experiment>`); the editor has Stop, a 60 s run limit and "Reset to starter code". The "About the
+dataset" panel starts closed everywhere.

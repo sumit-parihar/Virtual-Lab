@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Link, useOutletContext, useParams } from "react-router-dom";
 import { instructorApi } from "../api/instructor.js";
 import DataTable from "../components/DataTable.jsx";
+import StatTiles from "../components/StatTiles.jsx";
 import { excelFileName, saveBlob } from "../utils/download.js";
 import "./InstructorConsole.css";
 
@@ -96,6 +97,16 @@ export default function InstructorExperimentStatus() {
       </div>
 
       {downloadError && <div className="alert alert--error">{downloadError}</div>}
+
+      {table.rows.length > 0 && (
+        <StatTiles
+          items={[
+            { label: "Completed", value: `${table.rows.filter((r) => r.status === "completed").length} / ${table.rows.length}` },
+            { label: "In Progress", value: table.rows.filter((r) => r.status === "in_progress").length },
+            { label: "Not Attempted", value: table.rows.filter((r) => r.status === "not_started").length },
+          ]}
+        />
+      )}
 
       <DataTable
         columns={COLUMNS}

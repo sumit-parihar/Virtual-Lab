@@ -4,13 +4,17 @@ import { adminApi } from "../api/admin.js";
 import DataTable from "../components/DataTable.jsx";
 import Modal from "../components/Modal.jsx";
 import { errorMessage } from "../utils/errors.js";
+import { useUrlParams } from "../utils/useUrlParams.js";
 import "./InstructorConsole.css";
 import "./AdminConsole.css";
 
 // All batches with their instructor and student count. The admin creates batches here.
 export default function AdminBatches() {
   const [batches, setBatches] = useState([]);
-  const [showArchived, setShowArchived] = useState(false);
+  // "Show archived" is part of the address (?archived=1), so a refresh keeps it.
+  const [params, update] = useUrlParams();
+  const showArchived = params.get("archived") === "1";
+  const setShowArchived = (on) => update({ archived: on ? 1 : null, page: null });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [creating, setCreating] = useState(false);

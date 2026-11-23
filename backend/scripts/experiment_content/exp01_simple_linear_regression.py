@@ -9,8 +9,8 @@ AIM = 'To understand how a straight line can describe the relationship between o
 
 OBJECTIVE = 'After completing this experiment, students will be able to: describe a regression problem and say how it differs from a classification problem; write and interpret the equation ŷ = mx + c, including the slope and the intercept; explain what a residual is and why the least-squares line is chosen; split data into training and test sets and explain why this is done; train a `LinearRegression` model with scikit-learn and use it to make predictions; and evaluate a model with MAE, MSE and R², and name the main limitations of a straight-line model.'
 
-# Dummy link until the real video is provided.
-VIDEO_URL = "https://example.com/placeholder-video"
+# The explainer video, served by the app from frontend/public/videos/ (made with the Remotion project in D:\video).
+VIDEO_URL = "/videos/exp01-simple-linear-regression.mp4"
 
 NOTES = """## 1. Learning from examples
 
@@ -424,3 +424,95 @@ STARTER_CODE = 'result = None  # store your final answer in this variable\n\n# W
 
 # Solution used to compute the expected result (see solutions/ex01_simple_linear_regression.py).
 SOLUTION_FILE = 'ex01_simple_linear_regression.py'
+
+# "About the dataset" panel, shown in the Guided Lab and the Code Exercise (data only). The panel reads the
+# row count and the sample rows from the file itself, so they always match what the student's code loads.
+DATASET_INFO = {
+    "name": "Salary dataset",
+    "file_url": DATASET_URL,
+    "description": (
+        "Years of work experience and salary for 30 employees. A small public dataset that is often used to "
+        "teach simple linear regression."
+    ),
+    "row_meaning": "one employee",
+    "load_hint": 'pd.read_csv("Salary_dataset.csv")',
+    "columns": [
+        {
+            "name": "YearsExperience",
+            "meaning": "How many years the employee has worked",
+            "unit": "years",
+            "role": "feature",
+        },
+        {
+            "name": "Salary",
+            "meaning": "The employee's salary (the value to predict)",
+            "unit": "currency not stated in the source",
+            "role": "target",
+        },
+    ],
+    "class_column": None,  # regression: no classes to count
+    "sample_rows": 8,
+}
+
+# Guided Lab: data only (no code). The lab itself is frontend/src/components/guided-labs/LinearRegressionLab.jsx,
+# chosen by "kind". It uses the same Salary dataset file as the Code Exercise, and the student can only move
+# the controls. The best-fit values quoted in the steps are least squares on all 30 rows.
+LAB_CONFIG = {
+    "kind": "linear-regression",
+    "intro": (
+        "Move the sliders to change the line ŷ = mx + c drawn through the Salary dataset (30 people). "
+        "The graph and the error measures update immediately. Nothing you do here is saved."
+    ),
+    "dataset_url": DATASET_URL,
+    "x_column": "YearsExperience",
+    "y_column": "Salary",
+    "x_label": "Years of experience",
+    "y_label": "Salary",
+    "x_max": 15,
+    "y_max": 200000,
+    "slope": {"min": 0, "max": 20000, "step": 50, "start": 5000},
+    "intercept": {"min": 0, "max": 60000, "step": 500, "start": 20000},
+    "predict_x": {"min": 0, "max": 15, "step": 0.1, "start": 5},
+    "outlier": {"x": 2, "y": 140000},
+    "steps": [
+        {
+            "task": "The line starts at ŷ = 5,000x + 20,000, the example from the Theory. Move the Slope m slider "
+                    "left and right. What happens to the line?",
+            "explanation": "The slope m sets how steep the line is: how much the predicted salary changes for one extra "
+                           "year of experience. A larger m makes the line rise faster. The line still crosses the "
+                           "y-axis at the same place, because c has not changed.",
+        },
+        {
+            "task": "Now move the Intercept c slider. What changes, and what stays the same?",
+            "explanation": "The intercept c moves the whole line up or down without changing its steepness. It is the "
+                           "predicted salary when x = 0, that is, for someone with no experience.",
+        },
+        {
+            "task": "Tick Show residuals. Use both sliders to make the red lines as short as you can, and watch MAE, "
+                    "MSE and R².",
+            "explanation": "Each red line is a residual: actual − predicted. When the line follows the points closely, "
+                           "the residuals are short, MAE and MSE fall and R² moves towards 1. The starting line has a "
+                           "negative R²: it was worse than always predicting the average salary.",
+        },
+        {
+            "task": "Tick Show best-fit (least-squares) line and compare its numbers with yours. Can you get a "
+                    "smaller MSE than the best-fit line?",
+            "explanation": "No. Least squares chooses the line with the smallest total of squared residuals, so no other "
+                           "m and c can give a smaller MSE. On these 30 points it is about ŷ = 9,450x + 24,848. "
+                           "LinearRegression().fit() finds this line for you. The Code Exercise trains on 80% of the "
+                           "rows only, so its slope and intercept are slightly different.",
+        },
+        {
+            "task": "Tick Add an outlier point (an unusually high salary at 2 years). Watch the best-fit line and its R².",
+            "explanation": "The least-squares line is pulled towards the outlier, because squaring makes its very large "
+                           "residual count heavily, and R² drops. This is why data should be checked for strange "
+                           "values before training.",
+        },
+        {
+            "task": "Move the Predict slider to 5 years, then to 14 years. Read the predicted salary from the line.",
+            "explanation": "A prediction is just ŷ = m × x + c read off the line. The data only covers 1.2 to 10.6 "
+                           "years of experience, so a prediction for 14 years is extrapolation: the straight line may "
+                           "not hold that far from the data.",
+        },
+    ],
+}

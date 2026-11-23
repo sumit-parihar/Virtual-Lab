@@ -4,12 +4,14 @@ import { adminApi } from "../api/admin.js";
 import { AccountStatus } from "../components/admin/AccountBadges.jsx";
 import DataTable from "../components/DataTable.jsx";
 import Modal from "../components/Modal.jsx";
+import { useConfirm } from "../components/ConfirmDialog.jsx";
 import { errorMessage } from "../utils/errors.js";
 import "./InstructorConsole.css";
 import "./AdminConsole.css";
 
 // Instructor accounts: add, edit, resend the invitation, deactivate.
 export default function AdminInstructors() {
+  const confirm = useConfirm();
   const [instructors, setInstructors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -40,20 +42,31 @@ export default function AdminInstructors() {
     }
   }
 
-  function toggleActive(i) {
+  async function toggleActive(i) {
     if (i.is_active) {
       const warning = i.batches.length
         ? ` They still teach ${i.batches.map((b) => b.name).join(", ")}; those batches will need a new instructor.`
         : "";
-      if (!window.confirm(`Deactivate ${i.full_name}? They will not be able to log in.${warning}`)) return;
+      const ok = await confirm({
+        title: `Deactivate ${i.full_name}?`,
+        message: `They will not be able to log in.${warning}`,
+        confirmLabel: "Deactivate",
+        danger: true,
+      });
+      if (!ok) return;
       run(() => adminApi.deactivate(i.id), `${i.full_name} was deactivated.${warning}`);
     } else {
       run(() => adminApi.reactivate(i.id), `${i.full_name} was reactivated.`);
     }
   }
 
-  function resend(i) {
-    if (!window.confirm(`Send ${i.full_name} a new temporary password by email? Their current password stops working.`)) return;
+  async function resend(i) {
+    const ok = await confirm({
+      title: "Send a new temporary password?",
+      message: `${i.full_name} gets a new temporary password by email. Their current password stops working.`,
+      confirmLabel: "Send password",
+    });
+    if (!ok) return;
     run(() => adminApi.resendInvitation(i.id), (u) =>
       u.invitation === "failed" ? "The email could not be sent." : `A new temporary password was sent to ${u.email}.`
     );

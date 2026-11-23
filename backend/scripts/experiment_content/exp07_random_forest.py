@@ -1,5 +1,7 @@
 """Experiment 7: Random Forest Classification. Content approved for loading; edit here and re-run `python -m scripts.load_experiments`."""
 
+from .datasets import dataset_info
+
 TITLE = 'Random Forest Classification'
 SLUG = 'random-forest'
 
@@ -394,3 +396,71 @@ STARTER_CODE = 'result = None  # store your final answer in this variable\n\n# W
 
 # Solution used to compute the expected result (see solutions/ex07_random_forest.py).
 SOLUTION_FILE = 'ex07_random_forest.py'
+
+# "About the dataset" panel (Guided Lab and Code Exercise), data only: see datasets.py.
+DATASET_INFO = dataset_info("breast_cancer")
+
+# Guided Lab: data only (no code); the lab is frontend/src/components/guided-labs/RandomForestLab.jsx.
+# 100 trees on the Code Exercise's training rows (bootstrap samples, one random feature per split, fixed seeds).
+# Numbers in the steps are the lab's own; scikit-learn's forests on the same data score in the same range.
+LAB_CONFIG = {
+    "kind": "random-forest",
+    "intro": (
+        "A random forest grows many different trees and lets them vote. Choose how many trees vote, grow a "
+        "different forest, and click the plot to see the votes for a new sample. Nothing you do here is saved."
+    ),
+    "dataset_url": "/datasets/breast_cancer.csv",
+    "split_url": "/datasets/breast_cancer_split.json",
+    "target_column": "target",
+    "classes": [{"value": 0, "label": "0 = malignant"}, {"value": 1, "label": "1 = benign"}],
+    "feature_pairs": [
+        {"label": "mean radius and mean texture", "x": "mean radius", "y": "mean texture", "query": [15, 20]},
+        {"label": "worst radius and worst concave points", "x": "worst radius", "y": "worst concave points",
+         "query": [16.5, 0.12]},
+    ],
+    "trees": {"min": 1, "max": 100, "start": 1},
+    "steps": [
+        {
+            "task": "The forest starts with a single tree. Look at its blocky regions, then at the three trees shown "
+                    "on their own below the plot. Are they the same?",
+            "explanation": "No. Each tree was trained on its own bootstrap sample (rows drawn with replacement, so some "
+                           "appear twice and about a third are left out) and could use only one randomly chosen "
+                           "feature at each split. The trees are deliberately different, so they make different "
+                           "mistakes.",
+        },
+        {
+            "task": "With 1 tree, click \"Grow a different forest\" a few times and watch the test accuracy.",
+            "explanation": "The accuracy of one tree jumps around, for example about 95%, then about 88%, then about 86%. "
+                           "A single deep tree is unstable: a different sample of the training rows gives a very "
+                           "different tree. This is called high variance.",
+        },
+        {
+            "task": "Click Reset, move the slider to 100 trees, then click \"Grow a different forest\" a few times.",
+            "explanation": "With 100 trees voting, the regions become smoother and the test accuracy stays steady at "
+                           "about 91-92% whichever forest is grown. The trees' individual mistakes tend to cancel out "
+                           "in the vote. The accuracy chart shows the curve settling as trees are added; after a few "
+                           "dozen trees there is little change.",
+        },
+        {
+            "task": "With 100 trees, read the votes for the new sample ◆. Then click a spot deep inside the blue "
+                    "area and a spot deep inside the orange area.",
+            "explanation": "At the starting point the vote is close (about 43 malignant against 57 benign), so the "
+                           "forest predicts benign but is not sure; the share of votes is a rough probability. Far "
+                           "from the boundary almost all trees agree.",
+        },
+        {
+            "task": "Compare the out-of-bag estimate with the forest's test accuracy.",
+            "explanation": "Each tree never saw about a third of the training rows. Scoring every training row only with "
+                           "the trees that did not see it gives the out-of-bag estimate (about 86% here), a free "
+                           "estimate of accuracy on new data that needs no separate test set. It is in the same range "
+                           "as the test accuracy.",
+        },
+        {
+            "task": "Look at the dashed line in the chart (one full tree trained on all the training rows), then switch "
+                    "the features to worst radius and worst concave points.",
+            "explanation": "One full tree scores about 87% on the test set; the forest does better, at about 92%. With "
+                           "the more informative pair of features both improve and the forest reaches about 94%. The "
+                           "Code Exercise uses all 30 measurements.",
+        },
+    ],
+}

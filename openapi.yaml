@@ -866,10 +866,14 @@ components:
         lab_config:
           type: object
           nullable: true
-          description: Guided-lab input/parameter definition, rendered by the frontend.
+          description: "Guided Lab settings, data only (kind, dataset file, slider ranges, guided steps); the lab for each kind is a frontend component."
         starter_code: { type: string, nullable: true }
         code_problem_statement: { type: string, nullable: true, description: Shown above the code editor (Theory-style text) }
         code_dataset_url: { type: string, nullable: true, description: "Dataset file made available to the student's code in the browser, e.g. /datasets/Salary_dataset.csv (served by the frontend)" }
+        dataset_info:
+          type: object
+          nullable: true
+          description: "Read-only 'About the dataset' panel (Guided Lab and Code Exercise): file_url, name, description, row_meaning, load_hint, columns [{name, meaning, unit, role}], class_column, sample_rows. Sample rows and counts are read from the file by the browser."
         allowed_imports:
           type: array
           nullable: true

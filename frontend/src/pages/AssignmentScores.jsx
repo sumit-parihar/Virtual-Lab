@@ -1,15 +1,18 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { dashboardApi } from "../api/dashboard.js";
+import { scoreTone } from "../utils/format.js";
 import "./AssignmentScores.css";
 
 // Assignment Scores: exactly three columns. Values come from saved backend state.
+// On phones the table turns into one card per experiment (labels come from data-label).
 function scoreCell(exp) {
-  if (!exp.has_assignment) return "Assignment not Available";
+  if (!exp.has_assignment) return <span className="score-pill score-pill--none">Assignment not Available</span>;
   if (exp.assignment === "completed") {
-    return exp.assignment_score != null ? `${exp.assignment_score}%` : "Submitted";
+    if (exp.assignment_score == null) return <span className="score-pill score-pill--good">Submitted</span>;
+    return <span className={`score-pill score-pill--${scoreTone(exp.assignment_score)}`}>{exp.assignment_score}%</span>;
   }
-  return "Not Submitted";
+  return <span className="score-pill score-pill--pending">Not Submitted</span>;
 }
 
 export default function AssignmentScores() {
@@ -51,9 +54,11 @@ export default function AssignmentScores() {
             <tbody>
               {rows.map((exp) => (
                 <tr key={exp.experiment_id}>
-                  <td>{exp.experiment_number}</td>
-                  <td>{exp.experiment_title}</td>
-                  <td>{scoreCell(exp)}</td>
+                  <td data-label="Experiment No." className="scores-page__num">
+                    {String(exp.experiment_number).padStart(2, "0")}
+                  </td>
+                  <td data-label="Experiment Name" className="scores-page__name">{exp.experiment_title}</td>
+                  <td data-label="Assignment Score" className="scores-page__score">{scoreCell(exp)}</td>
                 </tr>
               ))}
             </tbody>

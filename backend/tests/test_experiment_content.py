@@ -45,7 +45,12 @@ def test_every_experiment_is_complete(content):
         assert text.strip()
     assert content.objective.startswith("After completing this experiment")
     assert "## References" in content.notes
-    assert content.video_url.startswith("https://")
+    # A web link, or a video file served by the app from frontend/public/videos/ (which must exist).
+    assert content.video_url.startswith(("https://", "/videos/"))
+    if content.video_url.startswith("/videos/"):
+        video = Path(__file__).resolve().parents[2] / "frontend" / "public" / content.video_url.lstrip("/")
+        if video.parent.exists():
+            assert video.is_file(), content.video_url
 
     for name in ("pre_quiz", "post_quiz", "assignment"):
         quiz = getattr(content, name)
@@ -78,6 +83,114 @@ def test_only_experiment_1_needs_a_dataset_file():
     path = Path(__file__).resolve().parents[2] / "frontend" / "public" / "datasets" / "Salary_dataset.csv"
     if path.parent.exists():
         assert path.read_text().splitlines()[0] == "YearsExperience,Salary"
+
+
+def test_experiment_1_has_a_data_only_guided_lab():
+    experiments = load_all()
+    lab = experiments[0].lab_config
+    assert lab is not None
+    assert lab["kind"] == "linear-regression"
+    assert lab["dataset_url"] == experiments[0].dataset_url  # the same presaved file as the Code Exercise
+    assert "compute" not in lab  # data only: the lab's code lives in the frontend
+    json.dumps(lab)
+    for name in ("slope", "intercept", "predict_x"):
+        slider = lab[name]
+        assert slider["min"] <= slider["start"] <= slider["max"] and slider["step"] > 0
+    assert len(lab["steps"]) >= 3
+    assert all(step["task"].strip() and step["explanation"].strip() for step in lab["steps"])
+
+
+# The lab kinds the frontend knows (GuidedLab.jsx, LABS). A lab_config with another kind would show "not available".
+LAB_KINDS = {
+    "linear-regression", "multiple-regression", "logistic-regression", "knn", "naive-bayes", "decision-tree",
+    "random-forest", "svm", "kmeans", "neural-network",
+}
+
+
+@pytest.mark.parametrize("content", [c for c in load_all() if c.lab_config], ids=lambda c: c.slug)
+def test_every_guided_lab_is_data_only_and_uses_presaved_files(content):
+    lab = content.lab_config
+    json.dumps(lab)
+    assert lab["kind"] in LAB_KINDS
+    assert "compute" not in lab  # never code: the lab itself is a frontend component
+    assert lab.get("intro", "").strip()
+    assert len(lab["steps"]) >= 3
+    assert all(step["task"].strip() and step["explanation"].strip() for step in lab["steps"])
+    for key in ("dataset_url", "split_url"):
+        if key in lab and DATASETS_DIR.exists():
+            assert (DATASETS_DIR / lab[key].split("/")[-1]).exists(), lab[key]
+    if lab["kind"] == "multiple-regression" and DATASETS_DIR.exists():
+        header = (DATASETS_DIR / lab["dataset_url"].split("/")[-1]).read_text().splitlines()[0].split(",")
+        assert {f["name"] for f in lab["features"]} <= set(header)
+        assert set(lab["start_features"]) <= {f["name"] for f in lab["features"]}
+        assert lab["target_column"] in header
+    if "feature_pairs" in lab and DATASETS_DIR.exists():  # every preset names two real columns of the file
+        header = (DATASETS_DIR / lab["dataset_url"].split("/")[-1]).read_text().splitlines()[0].split(",")
+        for pair in lab["feature_pairs"]:
+            assert pair["x"] in header and pair["y"] in header and pair["label"].strip()
+
+
+def test_loader_stores_the_guided_lab(db):
+    load(db)
+    first = db.query(Experiment).filter(Experiment.order_index == 1).one()
+    assert first.lab_config["kind"] == "linear-regression"
+    assert first.dataset_info["name"] == "Salary dataset"
+    second = db.query(Experiment).filter(Experiment.order_index == 2).one()
+    assert second.dataset_info["file_url"] == "/datasets/diabetes.csv"
+    assert all(e.dataset_info for e in db.query(Experiment).all())
+
+
+DATASETS_DIR = Path(__file__).resolve().parents[2] / "frontend" / "public" / "datasets"
+# Which scikit-learn loader each experiment's Code Exercise uses, so the panel describes that same data.
+EXPECTED_DATASET = {
+    1: "Salary_dataset.csv", 2: "diabetes.csv", 3: "breast_cancer.csv", 4: "iris.csv", 5: "wine.csv",
+    6: "iris.csv", 7: "breast_cancer.csv", 8: "wine.csv", 9: "iris.csv", 10: "digits.csv",
+}
+
+
+@pytest.mark.parametrize("content", load_all(), ids=lambda c: c.slug)
+def test_every_dataset_panel_matches_its_file(content):
+    info = content.dataset_info
+    assert info is not None
+    json.dumps(info)
+    file_name = info["file_url"].split("/")[-1]
+    assert file_name == EXPECTED_DATASET[content.number]
+    assert info["name"].strip() and info["description"].strip() and info["row_meaning"].strip()
+    assert info["load_hint"].split("(")[0].split()[-1] in content.code_problem_statement  # e.g. load_iris
+    assert info["sample_rows"] > 0
+    assert all(c["role"] in ("feature", "target", "unused") and c["meaning"].strip() for c in info["columns"])
+
+    path = DATASETS_DIR / file_name
+    if not path.parent.exists():  # backend checked out without the frontend
+        return
+    header = path.read_text(encoding="utf-8").splitlines()[0].split(",")
+    # The described columns cover the file's columns exactly, in order (a group covers `count` columns).
+    assert sum(c.get("count", 1) for c in info["columns"]) == len(header)
+    position = 0
+    for column in info["columns"]:
+        if column.get("count", 1) == 1:
+            assert column["name"] == header[position]
+        position += column.get("count", 1)
+    if info.get("class_column"):
+        column = header.index(info["class_column"])
+        labels = {line.split(",")[column] for line in path.read_text(encoding="utf-8").splitlines()[1:]}
+        assert set(info.get("class_names", {})) <= labels
+
+
+def test_experiment_1_dataset_panel_describes_the_salary_file():
+    first = load_all()[0]
+    info = first.dataset_info
+    assert info is not None
+    assert info["file_url"] == first.dataset_url
+    json.dumps(info)
+    assert info["row_meaning"].strip() and info["description"].strip()
+    assert info["sample_rows"] > 0
+    assert [c["role"] for c in info["columns"]] == ["feature", "target"]
+    assert all(c["meaning"].strip() for c in info["columns"])
+    assert "Salary_dataset.csv" in info["load_hint"]
+    path = Path(__file__).resolve().parents[2] / "frontend" / "public" / "datasets" / "Salary_dataset.csv"
+    if path.exists():  # every described column is a real column of the file, in the same order
+        assert [c["name"] for c in info["columns"]] == path.read_text().splitlines()[0].split(",")
 
 
 def test_expected_results_file_matches_the_experiments():

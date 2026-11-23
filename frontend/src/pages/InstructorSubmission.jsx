@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { instructorApi } from "../api/instructor.js";
-import { formatScore } from "../utils/format.js";
+import { formatScore, scoreTone } from "../utils/format.js";
 import "./InstructorConsole.css";
 
 // One student's submitted assignment: marks at the top, then every question with
@@ -71,21 +71,37 @@ export default function InstructorSubmission() {
         </div>
         <div className="ic-info__item">
           <span className="ic-info__label">Marks secured</span>
-          <strong>{data.score == null ? "—" : formatScore(data.score)}</strong>
+          {data.score == null ? (
+            <strong>—</strong>
+          ) : (
+            <span className={`score-pill score-pill--${scoreTone(data.score)} ic-info__score`}>
+              {formatScore(data.score)}
+            </span>
+          )}
+        </div>
+        <div className="ic-info__item">
+          <span className="ic-info__label">Correct answers</span>
+          <strong>
+            {data.questions.filter((q) => q.is_correct).length} of {data.questions.length}
+          </strong>
         </div>
       </div>
 
       <ol className="ic-quiz ic-submission">
-        {data.questions.map((q) => (
-          <li key={q.question_id} className="ic-quiz__question">
+        {data.questions.map((q, qi) => (
+          <li
+            key={q.question_id}
+            className={`ic-quiz__question ${q.is_correct ? "ic-quiz__question--correct" : "ic-quiz__question--wrong"}`}
+          >
             <div className="ic-quiz__head">
-              <p className="ic-quiz__text">{q.question_text}</p>
+              <p className="ic-quiz__num">Question {qi + 1} of {data.questions.length}</p>
               <span className={`badge ${q.is_correct ? "badge--green" : "badge--red"}`}>
                 {q.is_correct ? "Correct" : "Incorrect"}
               </span>
             </div>
+            <p className="ic-quiz__text">{q.question_text}</p>
             <ul className="ic-quiz__options">
-              {q.options.map((o) => {
+              {q.options.map((o, oi) => {
                 const chosen = o.id === q.selected_option_id;
                 const cls = [
                   "ic-quiz__option",
@@ -94,7 +110,10 @@ export default function InstructorSubmission() {
                 ].join(" ");
                 return (
                   <li key={o.id} className={cls}>
-                    <span>{o.option_text}</span>
+                    <span className="ic-quiz__key" aria-hidden="true">
+                      {o.is_correct ? "✓" : chosen ? "✕" : "ABCDEFGHIJ"[oi]}
+                    </span>
+                    <span className="ic-quiz__label">{o.option_text}</span>
                     <span className="ic-quiz__tags">
                       {chosen && <span className="badge badge--blue">Student's answer</span>}
                       {o.is_correct && <span className="badge badge--green">Correct answer</span>}

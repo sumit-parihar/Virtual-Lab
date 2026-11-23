@@ -5,26 +5,46 @@ import "./Navbar.css";
 
 const ROLE_LABEL = { student: "Student", instructor: "Instructor", admin: "Admin" };
 
-export default function Navbar() {
-  const { user, logout } = useAuth();
-  const navigate = useNavigate();
-  const location = useLocation();
-  const [menuOpen, setMenuOpen] = useState(false);
-  const menuRef = useRef(null);
+// The main links for each role.
+function linksFor(role) {
+  if (role === "student") {
+    return [
+      { to: "/", label: "Home", end: true },
+      { to: "/experiments", label: "Experiments" },
+      { to: "/dashboard", label: "View Progress" },
+    ];
+  }
+  if (role === "instructor") {
+    return [
+      { to: "/", label: "Home", end: true },
+      { to: "/batches", label: "Batches" },
+    ];
+  }
+  if (role === "admin") {
+    return [
+      { to: "/", label: "Home", end: true },
+      { to: "/admin/batches", label: "Batches" },
+      { to: "/admin/instructors", label: "Instructors" },
+      { to: "/admin/students", label: "Students" },
+    ];
+  }
+  return [];
+}
 
-  // Close the profile menu when the page changes.
-  useEffect(() => {
-    setMenuOpen(false);
-  }, [location.pathname]);
+function initialsOf(name) {
+  const parts = (name || "?").trim().split(/\s+/);
+  return ((parts[0]?.[0] || "") + (parts.length > 1 ? parts[parts.length - 1][0] : "")).toUpperCase() || "?";
+}
 
-  // Close on outside click or Escape.
+/** Close a popup on outside click or Escape. */
+function useDismiss(open, ref, close) {
   useEffect(() => {
-    if (!menuOpen) return undefined;
+    if (!open) return undefined;
     function onPointerDown(e) {
-      if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false);
+      if (ref.current && !ref.current.contains(e.target)) close();
     }
     function onKeyDown(e) {
-      if (e.key === "Escape") setMenuOpen(false);
+      if (e.key === "Escape") close();
     }
     document.addEventListener("mousedown", onPointerDown);
     document.addEventListener("keydown", onKeyDown);
@@ -32,7 +52,28 @@ export default function Navbar() {
       document.removeEventListener("mousedown", onPointerDown);
       document.removeEventListener("keydown", onKeyDown);
     };
-  }, [menuOpen]);
+  }, [open, ref, close]);
+}
+
+export default function Navbar() {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [menuOpen, setMenuOpen] = useState(false); // profile menu
+  const [linksOpen, setLinksOpen] = useState(false); // phone ☰ menu
+  const menuRef = useRef(null);
+  const headerRef = useRef(null);
+
+  // Close both menus when the page changes.
+  useEffect(() => {
+    setMenuOpen(false);
+    setLinksOpen(false);
+  }, [location.pathname]);
+
+  const closeMenu = useRef(() => setMenuOpen(false)).current;
+  const closeLinks = useRef(() => setLinksOpen(false)).current;
+  useDismiss(menuOpen, menuRef, closeMenu);
+  useDismiss(linksOpen, headerRef, closeLinks);
 
   function handleLogout() {
     setMenuOpen(false);
@@ -40,60 +81,39 @@ export default function Navbar() {
     navigate("/login");
   }
 
-  const initial = (user?.full_name || "?").trim().charAt(0).toUpperCase();
+  const links = linksFor(user?.role);
 
   return (
-    <header className="navbar">
+    <header className="navbar" ref={headerRef}>
       <div className="navbar__inner">
-        <NavLink to="/" className="navbar__brand">
-          ML Virtual Lab
+        <NavLink to="/" className="navbar__brand" aria-label="ML Virtual Lab, home">
+          <span className="navbar__mark" aria-hidden="true">ML</span>
+          <span className="navbar__name">ML Virtual Lab</span>
+          {user && user.role !== "student" && <span className="navbar__role">{ROLE_LABEL[user.role]}</span>}
         </NavLink>
 
-        <nav className="navbar__links">
-          {user ? (
-            <>
-              <NavLink to="/" end className="navbar__link">
-                Home
-              </NavLink>
-              {user.role === "instructor" && (
-                <NavLink to="/batches" className="navbar__link">
-                  Batches
+        {user ? (
+          <>
+            <nav className={`navbar__links${linksOpen ? " navbar__links--open" : ""}`} id="main-links" aria-label="Main">
+              {links.map((l) => (
+                <NavLink key={l.to} to={l.to} end={l.end} className="navbar__link">
+                  {l.label}
                 </NavLink>
-              )}
-              {user.role === "student" && (
-                <NavLink to="/experiments" className="navbar__link">
-                  Experiments
-                </NavLink>
-              )}
-              {user.role === "student" && (
-                <NavLink to="/dashboard" className="navbar__link">
-                  View Progress
-                </NavLink>
-              )}
-              {user.role === "admin" && (
-                <>
-                  <NavLink to="/admin/batches" className="navbar__link">
-                    Batches
-                  </NavLink>
-                  <NavLink to="/admin/instructors" className="navbar__link">
-                    Instructors
-                  </NavLink>
-                  <NavLink to="/admin/students" className="navbar__link">
-                    Students
-                  </NavLink>
-                </>
-              )}
+              ))}
+            </nav>
 
+            <div className="navbar__right">
               <div className="navbar__profile" ref={menuRef}>
                 <button
                   type="button"
-                  className="navbar__avatar"
+                  className="navbar__profile-btn"
                   aria-haspopup="menu"
                   aria-expanded={menuOpen}
-                  aria-label="Profile menu"
+                  aria-label={`Profile menu for ${user.full_name}`}
                   onClick={() => setMenuOpen((open) => !open)}
                 >
-                  {initial}
+                  <span className="navbar__avatar" aria-hidden="true">{initialsOf(user.full_name)}</span>
+                  <span className="navbar__user">{user.full_name}</span>
                 </button>
                 {menuOpen && (
                   <div className="navbar__menu" role="menu">
@@ -115,13 +135,26 @@ export default function Navbar() {
                   </div>
                 )}
               </div>
-            </>
-          ) : (
-            <NavLink to="/login" className="navbar__link">
-              Log in
-            </NavLink>
-          )}
-        </nav>
+
+              <button
+                type="button"
+                className="navbar__toggle"
+                aria-controls="main-links"
+                aria-expanded={linksOpen}
+                aria-label={linksOpen ? "Close menu" : "Open menu"}
+                onClick={() => setLinksOpen((open) => !open)}
+              >
+                <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                  {linksOpen ? <path d="M6 6l12 12M18 6L6 18" /> : <path d="M4 7h16M4 12h16M4 17h16" />}
+                </svg>
+              </button>
+            </div>
+          </>
+        ) : (
+          <NavLink to="/login" className="navbar__link">
+            Log in
+          </NavLink>
+        )}
       </div>
     </header>
   );

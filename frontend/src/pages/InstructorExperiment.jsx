@@ -3,7 +3,9 @@ import { Link, useParams } from "react-router-dom";
 import { instructorApi } from "../api/instructor.js";
 import AnswerKey from "../components/AnswerKey.jsx";
 import { SECTION_LABELS } from "../constants/sections.js";
-import { simpleMarkdown, toEmbedUrl } from "../utils/contentFormat.js";
+import { simpleMarkdown } from "../utils/contentFormat.js";
+import VideoPlayer from "../components/VideoPlayer.jsx";
+import { useUrlParams } from "../utils/useUrlParams.js";
 import "./InstructorConsole.css";
 
 // Read-only experiment content: the student sections without Guided Lab and
@@ -23,7 +25,10 @@ export default function InstructorExperiment() {
   const [experiment, setExperiment] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [tab, setTab] = useState("overview");
+  // The open tab is part of the address (?tab=…), so a refresh or Back keeps it.
+  const [params, update] = useUrlParams();
+  const tab = TABS.some((t) => t.id === params.get("tab")) ? params.get("tab") : "overview";
+  const setTab = (id) => update({ tab: id === "overview" ? null : id }, { push: true });
   const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
@@ -31,7 +36,6 @@ export default function InstructorExperiment() {
     setLoading(true);
     setError("");
     setExperiment(null);
-    setTab("overview");
     instructorApi
       .experiment(experimentId)
       .then((data) => !cancelled && setExperiment(data))
@@ -121,12 +125,7 @@ export default function InstructorExperiment() {
             <h2 className="ic-section__heading">{SECTION_LABELS.video}</h2>
             {experiment.video_url ? (
               <div className="ic-video">
-                <iframe
-                  src={toEmbedUrl(experiment.video_url)}
-                  title="Experiment video"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                />
+                <VideoPlayer url={experiment.video_url} />
               </div>
             ) : (
               <p className="ic-placeholder">No video available for this experiment yet.</p>

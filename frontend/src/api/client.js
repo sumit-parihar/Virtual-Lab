@@ -15,7 +15,19 @@ api.interceptors.response.use(
     const isCredentialCheck = url.includes("/auth/login") || url.includes("/auth/change-password");
     if (error.response?.status === 401 && signedIn && !isCredentialCheck) {
       localStorage.removeItem("access_token");
-      if (!window.location.pathname.startsWith("/login")) window.location.assign("/login");
+      if (!window.location.pathname.startsWith("/login")) {
+        // Explain why on the login page, and come back to this page after signing in again.
+        try {
+          sessionStorage.setItem(
+            "session_notice",
+            "Your session has ended (you signed in somewhere else, signed out, or the login expired). Please sign in again.",
+          );
+        } catch {
+          /* storage unavailable: the login page simply shows no notice */
+        }
+        const next = window.location.pathname + window.location.search;
+        window.location.assign(`/login?next=${encodeURIComponent(next)}`);
+      }
     }
     return Promise.reject(error);
   }

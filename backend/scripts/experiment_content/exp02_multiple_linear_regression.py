@@ -1,5 +1,7 @@
 """Experiment 2: Multiple Linear Regression. Content approved for loading; edit here and re-run `python -m scripts.load_experiments`."""
 
+from .datasets import dataset_info
+
 TITLE = 'Multiple Linear Regression'
 SLUG = 'multiple-linear-regression'
 
@@ -410,3 +412,76 @@ STARTER_CODE = 'result = None  # store your final answer in this variable\n\n# W
 
 # Solution used to compute the expected result (see solutions/ex02_multiple_linear_regression.py).
 SOLUTION_FILE = 'ex02_multiple_linear_regression.py'
+
+# "About the dataset" panel (Guided Lab and Code Exercise), data only: see datasets.py.
+DATASET_INFO = dataset_info("diabetes")
+
+# Guided Lab: data only (no code); the lab is frontend/src/components/guided-labs/MultipleRegressionLab.jsx.
+# It trains on the Code Exercise's training rows (diabetes_split.json). Numbers quoted in the steps were checked
+# against scikit-learn's LinearRegression on the same split.
+LAB_CONFIG = {
+    "kind": "multiple-regression",
+    "intro": (
+        "Choose which of the 10 patient measurements the model may use. The model ŷ = b₀ + b₁x₁ + … + bₙxₙ is "
+        "trained again at once, and the equation, the coefficients and the scores update. Nothing you do here is saved."
+    ),
+    "dataset_url": "/datasets/diabetes.csv",
+    "split_url": "/datasets/diabetes_split.json",
+    "target_column": "target",
+    "target_label": "Disease progression",
+    "features": [
+        {"name": "age", "label": "Age"},
+        {"name": "sex", "label": "Sex"},
+        {"name": "bmi", "label": "Body-mass index"},
+        {"name": "bp", "label": "Blood pressure"},
+        {"name": "s1", "label": "Total cholesterol"},
+        {"name": "s2", "label": "LDL"},
+        {"name": "s3", "label": "HDL"},
+        {"name": "s4", "label": "Cholesterol / HDL"},
+        {"name": "s5", "label": "Triglycerides (log)"},
+        {"name": "s6", "label": "Blood sugar"},
+    ],
+    "start_features": ["bmi"],
+    "axis_max": 350,
+    "steps": [
+        {
+            "task": "Only bmi is ticked. Read the equation and the test R². What kind of model is this?",
+            "explanation": "With a single feature this is simple linear regression, as in Experiment 1: ŷ = 152.00 + "
+                           "998.58·bmi. b₀ is the intercept and b₁ the coefficient of bmi. The coefficient looks large "
+                           "because bmi has been scaled to small numbers: the size of a coefficient depends on the unit "
+                           "of its feature. The test R² is only about 0.23.",
+        },
+        {
+            "task": "Tick s5 as well. Watch the test R² and the coefficient of bmi.",
+            "explanation": "The test R² almost doubles, to about 0.45, because s5 adds information that bmi does not "
+                           "have. The coefficient of bmi drops from about 999 to about 732: it now means the change in "
+                           "the prediction when bmi rises by one unit while s5 stays the same.",
+        },
+        {
+            "task": "Look at the coefficient bars. Which features push the prediction up and which push it down?",
+            "explanation": "A bar to the right (positive coefficient) means a higher value of that feature raises the "
+                           "prediction; a bar to the left (negative) lowers it, with the other features held fixed. A "
+                           "coefficient describes an association in the data, not necessarily a cause.",
+        },
+        {
+            "task": "Click Use all 10. Compare the training R² with the test R².",
+            "explanation": "The training R² rises from about 0.46 to about 0.53, but the test R² stays at about 0.45. "
+                           "Adding features never lowers the training error, so a better training score alone does not "
+                           "mean a better model. Here the eight extra features add almost nothing on new patients. "
+                           "Always judge the model on the test data and prefer the simplest model that works.",
+        },
+        {
+            "task": "Click Reset, tick s1 and untick bmi. Note the coefficient of s1. Then tick s2 as well.",
+            "explanation": "Alone, s1 gets about +326. With s2 added, s1 jumps to about +488 and s2 gets a negative "
+                           "coefficient, about −182. s1 and s2 are both cholesterol measurements and are strongly "
+                           "related, so the model cannot decide how to share the credit between them "
+                           "(multicollinearity). The individual coefficients become unstable and hard to trust.",
+        },
+        {
+            "task": "With all 10 features, look at the predicted vs actual plot and the test RMSE.",
+            "explanation": "The RMSE (about 54) is in the units of the target: a typical prediction is about 54 away "
+                           "from the real value. The dots follow the dashed line only roughly, which matches the "
+                           "modest R²: these measurements explain part of the progression, not all of it.",
+        },
+    ],
+}

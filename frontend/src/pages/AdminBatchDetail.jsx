@@ -4,6 +4,7 @@ import { adminApi } from "../api/admin.js";
 import AddStudent from "../components/admin/AddStudent.jsx";
 import ImportStudents from "../components/admin/ImportStudents.jsx";
 import StudentTable from "../components/admin/StudentTable.jsx";
+import { useConfirm } from "../components/ConfirmDialog.jsx";
 import { errorMessage } from "../utils/errors.js";
 import { BatchForm } from "./AdminBatches.jsx";
 import "./InstructorConsole.css";
@@ -11,6 +12,7 @@ import "./AdminConsole.css";
 
 // One batch: its details, its single instructor, a student import and the enrolled students.
 export default function AdminBatchDetail() {
+  const confirm = useConfirm();
   const { batchId } = useParams();
   const [batch, setBatch] = useState(null);
   const [instructors, setInstructors] = useState([]);
@@ -82,10 +84,14 @@ export default function AdminBatchDetail() {
             <button
               type="button"
               className="btn btn--sm btn--ghost"
-              onClick={() =>
-                window.confirm("Archive this batch? It is hidden from the lists and from the instructor, and nothing is deleted. You can restore it later.") &&
-                run(() => adminApi.archiveBatch(batch.id), "The batch was archived.")
-              }
+              onClick={async () => {
+                const ok = await confirm({
+                  title: "Archive this batch?",
+                  message: "It is hidden from the lists and from the instructor. Nothing is deleted, and you can restore it later.",
+                  confirmLabel: "Archive",
+                });
+                if (ok) run(() => adminApi.archiveBatch(batch.id), "The batch was archived.");
+              }}
             >
               Archive
             </button>
@@ -131,10 +137,15 @@ export default function AdminBatchDetail() {
               <button
                 type="button"
                 className="btn btn--sm btn--ghost"
-                onClick={() =>
-                  window.confirm(`Remove ${current.full_name} from this batch? The batch will have no instructor.`) &&
-                  run(() => adminApi.removeInstructor(batch.id), "The instructor was removed.")
-                }
+                onClick={async () => {
+                  const ok = await confirm({
+                    title: `Remove ${current.full_name} from this batch?`,
+                    message: "The batch will have no instructor until you assign one.",
+                    confirmLabel: "Remove instructor",
+                    danger: true,
+                  });
+                  if (ok) run(() => adminApi.removeInstructor(batch.id), "The instructor was removed.");
+                }}
               >
                 Remove instructor
               </button>

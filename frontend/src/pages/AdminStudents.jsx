@@ -3,6 +3,7 @@ import { adminApi } from "../api/admin.js";
 import AddStudent from "../components/admin/AddStudent.jsx";
 import StudentTable from "../components/admin/StudentTable.jsx";
 import { errorMessage } from "../utils/errors.js";
+import { useUrlParams } from "../utils/useUrlParams.js";
 import "./InstructorConsole.css";
 import "./AdminConsole.css";
 
@@ -10,7 +11,10 @@ import "./AdminConsole.css";
 export default function AdminStudents() {
   const [students, setStudents] = useState([]);
   const [batches, setBatches] = useState([]);
-  const [batchId, setBatchId] = useState("");
+  // The batch filter is part of the address (?batch=…), so a refresh keeps it; changing it starts at page 1.
+  const [params, update] = useUrlParams();
+  const batchId = params.get("batch") ?? "";
+  const setBatchId = (value) => update({ batch: value, page: null });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [adding, setAdding] = useState(false);

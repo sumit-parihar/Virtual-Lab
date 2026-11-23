@@ -26,3 +26,7 @@ frontend/public/monaco/
 frontend/test-results/
 frontend/playwright-report/
 
+.env.local
+
+# Browser-test logs from local Playwright MCP runs
+.playwright-mcp/

@@ -2,6 +2,8 @@ import { useState } from "react";
 import Editor, { loader } from "@monaco-editor/react";
 import { usePyodide } from "../editor/usePyodide.js";
 import { codeSubmissionsApi } from "../api/codeSubmissions.js";
+import { useAuth } from "../context/AuthContext.jsx";
+import { useConfirm } from "./ConfirmDialog.jsx";
 import "./CodeEditor.css";
 
 // With VITE_SELF_HOST_EDITOR=true the Monaco editor files come from /monaco/vs (created by `npm run setup:editor`)
@@ -18,9 +20,52 @@ if (import.meta.env.VITE_SELF_HOST_EDITOR === "true") {
  *   onSubmitted   — callback called with CodeSubmissionOut after successful submit
  *   canSubmit     — false for instructors/admins: they can run code but not submit it
  */
+function readDraft(key) {
+  try {
+    return key ? localStorage.getItem(key) : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeDraft(key, value) {
+  try {
+    if (!key) return;
+    if (value === null) localStorage.removeItem(key);
+    else localStorage.setItem(key, value);
+  } catch {
+    /* storage full or blocked: the draft is simply not kept */
+  }
+}
+
 export default function CodeEditor({ experiment, onSubmitted, canSubmit = true }) {
-  const [code, setCode] = useState(experiment?.starter_code || "# Write your Python code here\n");
-  const { status, stdout, result, run } = usePyodide();
+  const confirm = useConfirm();
+  const { user } = useAuth();
+  const starter = experiment?.starter_code || "# Write your Python code here\n";
+  // The student's own draft, kept in this browser so it survives a refresh (one per user and experiment).
+  const draftKey = user && experiment ? `ml-lab:code:${user.id}:${experiment.id}` : null;
+  const [code, setCode] = useState(() => readDraft(draftKey) ?? starter);
+  const { status, stdout, result, notice, run, stop } = usePyodide();
+
+  function changeCode(value) {
+    const next = value || "";
+    setCode(next);
+    writeDraft(draftKey, next === starter ? null : next);
+  }
+
+  async function resetToStarter() {
+    if (code !== starter) {
+      const ok = await confirm({
+        title: "Reset to the starter code?",
+        message: "Your code in this editor will be replaced with the original starter code. Your changes will be lost.",
+        confirmLabel: "Reset code",
+        danger: true,
+      });
+      if (!ok) return;
+    }
+    setCode(starter);
+    writeDraft(draftKey, null);
+  }
   const [submitting, setSubmitting] = useState(false);
   const [submitResult, setSubmitResult] = useState(null);
   const [submitError, setSubmitError] = useState("");
@@ -79,59 +124,72 @@ export default function CodeEditor({ experiment, onSubmitted, canSubmit = true }
     running: "Running…",
     done: "Done",
     error: "Error",
+    stopped: "Stopped",
   }[status] || "Ready";
 
   return (
     <div className="code-editor">
-      {experiment?.allowed_imports?.length > 0 && (
-        <div className="code-editor__imports">
-          <strong>Allowed imports:</strong>{" "}
-          {experiment.allowed_imports.join(", ")}
+      <div className="code-editor__shell">
+        <div className="code-editor__toolbar">
+          <span className="code-editor__file">
+            main.py
+            {code !== starter && <span className="code-editor__saved"> · saved in this browser</span>}
+          </span>
+          <div className="code-editor__actions">
+            {!isRunning && (
+              <button type="button" className="code-editor__btn code-editor__btn--quiet" onClick={resetToStarter} disabled={code === starter}>
+                Reset to starter code
+              </button>
+            )}
+            {isRunning ? (
+              <button type="button" className="code-editor__btn code-editor__btn--stop" onClick={() => stop()}>
+                <svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="5" width="14" height="14" rx="2" /></svg>
+                Stop
+              </button>
+            ) : (
+              <button type="button" className="code-editor__btn code-editor__btn--run" onClick={handleRun}>
+                <svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4l13 8-13 8z" /></svg>
+                Run
+              </button>
+            )}
+            {result && canSubmit && (
+              <button type="button" className="code-editor__btn code-editor__btn--submit" onClick={handleSubmit} disabled={submitting}>
+                {submitting ? "Submitting…" : "Submit"}
+              </button>
+            )}
+          </div>
         </div>
-      )}
 
-      {datasetName && (
-        <div className="code-editor__imports">
-          <strong>Dataset file:</strong> {datasetName}
+        <div className="code-editor__monaco">
+          <Editor
+            height="380px"
+            defaultLanguage="python"
+            theme="vs-dark"
+            value={code}
+            onChange={changeCode}
+            options={{
+              fontSize: 14,
+              fontFamily: "'JetBrains Mono', Consolas, monospace",
+              minimap: { enabled: false },
+              scrollBeyondLastLine: false,
+              wordWrap: "on",
+              padding: { top: 12 },
+            }}
+          />
         </div>
-      )}
 
-      <div className="code-editor__monaco">
-        <Editor
-          height="350px"
-          defaultLanguage="python"
-          theme="vs-dark"
-          value={code}
-          onChange={(val) => setCode(val || "")}
-          options={{
-            fontSize: 14,
-            minimap: { enabled: false },
-            scrollBeyondLastLine: false,
-            wordWrap: "on",
-          }}
-        />
-      </div>
-
-      <div className="code-editor__toolbar">
-        <button
-          className="btn btn--primary"
-          onClick={handleRun}
-          disabled={isRunning}
-        >
-          {isRunning ? statusLabel : "▶ Run"}
-        </button>
-        {result && canSubmit && (
-          <button
-            className="btn btn--ghost"
-            onClick={handleSubmit}
-            disabled={submitting}
-          >
-            {submitting ? "Submitting…" : "Submit"}
-          </button>
-        )}
-        <span className={`code-editor__status code-editor__status--${status}`}>
-          {statusLabel}
-        </span>
+        <div className="code-editor__statusbar">
+          <span className={`code-editor__status code-editor__status--${status}`} role="status">
+            {statusLabel}
+          </span>
+          {(experiment?.allowed_imports?.length > 0 || datasetName) && (
+            <span className="code-editor__meta">
+              {experiment?.allowed_imports?.length > 0 && <>Allowed imports: {experiment.allowed_imports.join(", ")}</>}
+              {experiment?.allowed_imports?.length > 0 && datasetName && " · "}
+              {datasetName && <>Dataset file: {datasetName}</>}
+            </span>
+          )}
+        </div>
       </div>
 
       {/* stdout output */}
@@ -173,6 +231,7 @@ export default function CodeEditor({ experiment, onSubmitted, canSubmit = true }
         </div>
       )}
 
+      {notice && <div className="alert alert--warning">{notice}</div>}
       {submitError && <div className="alert alert--error">{submitError}</div>}
       {datasetError && <div className="alert alert--error">{datasetError}</div>}
 

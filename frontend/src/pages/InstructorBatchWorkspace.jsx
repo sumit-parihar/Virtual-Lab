@@ -60,15 +60,21 @@ export default function InstructorBatchWorkspace() {
 
   useEffect(loadExperiments, [loadExperiments]);
 
-  // Keep a submenu open while one of its pages is showing.
+  // Desktop: keep a submenu open while one of its pages is showing.
+  // Phones (sidebar stacked above the content): close the submenus after every
+  // navigation, so a ten-item list never pushes the page itself off the first screen.
   const insideExperiments = location.pathname.includes(`/batches/${batchId}/experiments/`);
   const insideAssignments = location.pathname.includes(`/batches/${batchId}/assignments/`);
   useEffect(() => {
+    const phone = window.matchMedia?.("(max-width: 760px)").matches;
+    if (phone) {
+      setExperimentsOpen(false);
+      setAssignmentsOpen(false);
+      return;
+    }
     if (insideExperiments) setExperimentsOpen(true);
-  }, [insideExperiments]);
-  useEffect(() => {
     if (insideAssignments) setAssignmentsOpen(true);
-  }, [insideAssignments]);
+  }, [location.pathname, insideExperiments, insideAssignments]);
 
   const load = useCallback(() => {
     setLoading(true);

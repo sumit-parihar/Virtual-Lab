@@ -1,5 +1,7 @@
 """Experiment 3: Logistic Regression. Content approved for loading; edit here and re-run `python -m scripts.load_experiments`."""
 
+from .datasets import dataset_info
+
 TITLE = 'Logistic Regression'
 SLUG = 'logistic-regression'
 
@@ -422,3 +424,74 @@ STARTER_CODE = 'result = None  # store your final answer in this variable\n\n# W
 
 # Solution used to compute the expected result (see solutions/ex03_logistic_regression.py).
 SOLUTION_FILE = 'ex03_logistic_regression.py'
+
+# "About the dataset" panel (Guided Lab and Code Exercise), data only: see datasets.py.
+DATASET_INFO = dataset_info("breast_cancer")
+
+# Guided Lab: data only (no code); the lab is frontend/src/components/guided-labs/LogisticRegressionLab.jsx.
+# Two features at a time, scaled with the training rows of the Code Exercise's split. Numbers in the steps were
+# checked against scikit-learn's LogisticRegression (C=1) run to full convergence on the same split.
+LAB_CONFIG = {
+    "kind": "logistic-regression",
+    "intro": (
+        "The model uses two measurements at a time. It computes a score z, turns it into a probability p with the "
+        "sigmoid, and predicts class 1 (benign) when p is at least the threshold. Move the threshold and change the "
+        "two features to see what happens. Nothing you do here is saved."
+    ),
+    "dataset_url": "/datasets/breast_cancer.csv",
+    "split_url": "/datasets/breast_cancer_split.json",
+    "target_column": "target",
+    "positive_class": 1,
+    "classes": [{"value": 0, "label": "0 = malignant"}, {"value": 1, "label": "1 = benign"}],
+    "feature_pairs": [
+        {"label": "mean radius and mean texture", "x": "mean radius", "y": "mean texture"},
+        {"label": "worst radius and worst concave points", "x": "worst radius", "y": "worst concave points"},
+        {"label": "mean smoothness and mean symmetry", "x": "mean smoothness", "y": "mean symmetry"},
+    ],
+    "threshold": {"min": 0.05, "max": 0.95, "step": 0.05, "start": 0.5},
+    "steps": [
+        {
+            "task": "Look at the plot. Each dot is a cell sample (filled = training, ring = test), coloured by its real "
+                    "class. What shape is the black decision boundary?",
+            "explanation": "It is a straight line. The model switches class where the score z = b₀ + b₁x₁ + b₂x₂ "
+                           "reaches a fixed value, and a weighted sum of two features is constant along a straight "
+                           "line. Logistic regression is a linear classifier: it cannot draw a curved boundary.",
+        },
+        {
+            "task": "Look at the sigmoid chart below the plot. Where does a score of z = 0 land, and where are the "
+                    "test samples the model is most sure about?",
+            "explanation": "z = 0 gives p = 0.5 exactly. A large positive score gives p close to 1 (class 1, benign), "
+                           "a large negative score gives p close to 0. Rings near the middle of the curve are the "
+                           "samples the model is unsure about.",
+        },
+        {
+            "task": "Read the equation. Both coefficients are negative. What does that mean for a sample with a "
+                    "large mean radius?",
+            "explanation": "A negative coefficient lowers the score z when that feature grows, so a larger mean radius "
+                           "lowers the probability of benign, with the other feature held fixed. Large cell nuclei go "
+                           "with malignant samples in this data.",
+        },
+        {
+            "task": "Move the threshold down to 0.20. Watch the confusion matrix, precision and recall.",
+            "explanation": "The model now says \"benign\" more often. All 71 benign test samples are found (recall "
+                           "100%, FN = 0), but 12 malignant samples are wrongly called benign (FP = 12), so precision "
+                           "falls to about 85.5%. Lowering the threshold catches more positives but raises false alarms.",
+        },
+        {
+            "task": "Now move the threshold up to 0.80. Which mistake becomes rare, and which becomes common?",
+            "explanation": "Only 1 malignant sample is now called benign (FP = 1, precision about 98%), but 14 benign "
+                           "samples are missed (FN = 14, recall about 80%). Here a false positive means a malignant "
+                           "sample called benign, the more dangerous mistake, so a higher threshold may be preferred, "
+                           "at the cost of more benign samples sent for extra checks. The best threshold depends on the "
+                           "cost of each kind of mistake. Accuracy alone does not show this.",
+        },
+        {
+            "task": "Reset the threshold, then switch the features to \"worst radius and worst concave points\", and "
+                    "then to \"mean smoothness and mean symmetry\". Compare the accuracy.",
+            "explanation": "With worst radius and worst concave points the classes are well separated and test accuracy "
+                           "is about 96.5%. With mean smoothness and mean symmetry the two classes overlap and accuracy "
+                           "falls to about 68.4%. A good model needs informative features; the Code Exercise uses all "
+                           "30 measurements.",
+        },
+    ],
+}

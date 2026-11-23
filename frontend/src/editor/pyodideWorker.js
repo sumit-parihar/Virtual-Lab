@@ -15,8 +15,10 @@
 
 // Pyodide is loaded from the app's own copy in /pyodide/ (created by `npm run setup:editor`, so student
 // computers do not need the internet). If that copy is missing, the public CDN is used instead.
+// When the app is shared over a tunnel (VITE_PYODIDE_FROM_CDN=true), the worker is named "pyodide-cdn" and loads from
+// the CDN directly, so visitors do not download the ~100 MB of Python packages through the host's upload connection.
 const PYODIDE_CDN = "https://cdn.jsdelivr.net/pyodide/v0.26.2/full/";
-let pyodideIndexURL = "/pyodide/";
+let pyodideIndexURL = self.name === "pyodide-cdn" ? PYODIDE_CDN : "/pyodide/";
 try {
   importScripts(pyodideIndexURL + "pyodide.js");
 } catch (err) {

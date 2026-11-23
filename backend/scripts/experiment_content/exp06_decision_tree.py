@@ -1,5 +1,7 @@
 """Experiment 6: Decision Tree Classification. Content approved for loading; edit here and re-run `python -m scripts.load_experiments`."""
 
+from .datasets import dataset_info
+
 TITLE = 'Decision Tree Classification'
 SLUG = 'decision-tree'
 
@@ -398,3 +400,73 @@ STARTER_CODE = 'result = None  # store your final answer in this variable\n\n# W
 
 # Solution used to compute the expected result (see solutions/ex06_decision_tree.py).
 SOLUTION_FILE = 'ex06_decision_tree.py'
+
+# "About the dataset" panel (Guided Lab and Code Exercise), data only: see datasets.py.
+DATASET_INFO = dataset_info("iris")
+
+# Guided Lab: data only (no code); the lab is frontend/src/components/guided-labs/DecisionTreeLab.jsx.
+# Gini trees on the Code Exercise's training rows. Numbers in the steps are the lab's own; they match scikit-learn's
+# DecisionTreeClassifier except where several questions are equally good deep in an unlimited tree.
+LAB_CONFIG = {
+    "kind": "decision-tree",
+    "intro": (
+        "The tree learns a series of yes/no questions about two measurements. Limit how deep it may grow and how "
+        "small its leaves may be, and watch the questions, the rectangular regions and the accuracy change. Nothing "
+        "you do here is saved."
+    ),
+    "dataset_url": "/datasets/iris.csv",
+    "split_url": "/datasets/iris_split.json",
+    "target_column": "target",
+    "classes": [
+        {"value": 0, "label": "0 = setosa"},
+        {"value": 1, "label": "1 = versicolor"},
+        {"value": 2, "label": "2 = virginica"},
+    ],
+    "feature_pairs": [
+        {"label": "petal length and petal width", "x": "petal length (cm)", "y": "petal width (cm)"},
+        {"label": "sepal length and sepal width", "x": "sepal length (cm)", "y": "sepal width (cm)"},
+    ],
+    "max_depth": {"min": 1, "max": 10, "start": 2},
+    "min_samples_leaf": {"min": 1, "max": 20, "start": 1},
+    "steps": [
+        {
+            "task": "Read the first question of the tree (the root). How many flowers of each species reach it, what "
+                    "is its Gini impurity, and what happens on the yes branch?",
+            "explanation": "The root holds all 120 training flowers, 40, 41 and 39 of each species, so it is very mixed: "
+                           "Gini = 1 − (p₁² + p₂² + p₃²) ≈ 0.667. The question \"Is petal length ≤ 2.45?\" sends all 40 "
+                           "setosa flowers to the yes branch, a pure leaf with Gini 0. The tree chose this question "
+                           "because it lowers the weighted impurity of the two groups the most.",
+        },
+        {
+            "task": "Set the max depth to 1. How many leaves are there, and what is the test accuracy?",
+            "explanation": "With one question the tree has only two leaves: setosa, and one leaf that must call both "
+                           "versicolor and virginica by the same name. Test accuracy drops to about 63%.",
+        },
+        {
+            "task": "Set the max depth back to 2. Look at the new question and at the shape of the shaded regions.",
+            "explanation": "The second question, \"Is petal length ≤ 4.75?\", splits versicolor from virginica, and test "
+                           "accuracy rises to about 97%. Every question compares one feature with a value, so the "
+                           "regions are always rectangles with edges parallel to the axes. A diagonal boundary would "
+                           "need many small steps.",
+        },
+        {
+            "task": "Increase the max depth to 3, 4 and 5. Watch the number of leaves and the two accuracies.",
+            "explanation": "At depth 3 every test flower is already classified correctly (100%). Deeper trees add more "
+                           "leaves and push the training accuracy up, but the test accuracy cannot improve. A shallow "
+                           "tree is easier to read and usually generalises better.",
+        },
+        {
+            "task": "Switch the features to sepal length and sepal width, then move the max depth to \"no limit\".",
+            "explanation": "Without a limit the tree keeps splitting until almost every leaf is pure: 41 leaves, about "
+                           "94% on the training flowers but only about 60% on the test flowers, against about 83% at "
+                           "depth 3. The tree has memorised the training data, noise included: overfitting. The "
+                           "accuracy chart shows the training line rising while the test line falls.",
+        },
+        {
+            "task": "Keep \"no limit\" and raise the min samples per leaf to 15.",
+            "explanation": "Now no leaf may hold fewer than 15 training flowers, so the tree stops early: only 6 leaves, "
+                           "and test accuracy rises to about 80%. Limiting the depth and requiring a minimum leaf size "
+                           "are two ways to stop a tree from overfitting.",
+        },
+    ],
+}

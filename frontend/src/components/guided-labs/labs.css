@@ -1,0 +1,427 @@
+/* Shared look of the guided labs (Experiments 2-10). Experiment 1's own styles are in GuidedLab.css. */
+.lab {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.lab__layout {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(260px, 2fr);
+  gap: var(--space-2);
+  align-items: start;
+}
+
+@media (max-width: 860px) {
+  .lab__layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.lab__left {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.lab__card {
+  margin: 0;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: var(--space-1);
+}
+
+.lab__card-title {
+  margin: 0.25rem 0.5rem 0.5rem;
+  font-size: 0.95rem;
+}
+
+.lab__panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  background: var(--color-primary-soft);
+  border: 1px solid var(--color-primary-border);
+  border-radius: 12px;
+  padding: var(--space-2);
+}
+
+.lab__panel > .btn {
+  align-self: flex-start;
+}
+
+.lab__equation {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 0.95rem;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+
+.lab__note {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--color-text-muted);
+}
+
+.lab__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem var(--space-2);
+  padding: 0.25rem 0.5rem 0;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
+.lab__legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.lab__checks {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 0.3rem 0.75rem;
+}
+
+.lab__check {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.45rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.lab__check input,
+.lab__panel input[type="range"] {
+  accent-color: var(--color-primary);
+}
+
+.lab__check small {
+  margin-left: 0.35rem;
+  color: var(--color-text-muted);
+  font-size: 0.8rem;
+}
+
+.lab__buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.lab__metrics {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  font-size: 0.9rem;
+}
+
+.lab__metrics th,
+.lab__metrics td {
+  padding: 0.4rem 0.6rem;
+  text-align: right;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.lab__metrics th:first-child {
+  text-align: left;
+}
+
+.lab__metrics td {
+  font-family: var(--font-mono);
+}
+
+.lab__heading {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+/* Legend keys */
+.lab-key {
+  display: inline-block;
+}
+
+.lab-key--dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.lab-key--muted {
+  background: var(--color-text-muted);
+}
+
+.lab-key--ring {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid var(--color-text-muted);
+  background: #ffffff;
+}
+
+.lab-key--line {
+  width: 18px;
+  border-top: 3px solid var(--color-text);
+}
+
+.lab__select {
+  width: 100%;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  font: inherit;
+  font-size: 0.9rem;
+}
+
+.lab__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-weight: 600;
+  font-size: 0.92rem;
+}
+
+/* Neural network lab */
+.lab-neuron {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--space-2);
+  align-items: center;
+  padding: 0 0.5rem 0.5rem;
+}
+
+@media (max-width: 860px) {
+  .lab-neuron {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.lab-neuron__controls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.lab-digits {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  padding: 0 0.5rem 0.5rem;
+}
+
+.lab-digit {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.3rem;
+  border: 2px solid var(--color-success-soft);
+  border-radius: var(--radius);
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+.lab-digit--wrong {
+  border-color: var(--color-error);
+  background: var(--color-error-soft);
+}
+
+.lab-digit svg {
+  image-rendering: pixelated;
+}
+
+.lab-cm10 {
+  border-collapse: collapse;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  margin: 0 0.5rem 0.5rem;
+}
+
+.lab-cm10 th,
+.lab-cm10 td {
+  border: 1px solid var(--color-border);
+  min-width: 2rem;
+  padding: 0.25rem;
+  text-align: center;
+}
+
+.lab-cm10 thead th:first-child {
+  font-family: var(--font-main);
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+/* Small multiples (individual trees) */
+.lab-minis {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+/* Decision tree as nested questions */
+.lab-tree {
+  max-height: 360px;
+  overflow: auto;
+  padding: 0 0.5rem 0.5rem;
+  font-size: 0.86rem;
+}
+
+.lab-tree ul {
+  list-style: none;
+  margin: 0;
+  padding-left: 1.1rem;
+  border-left: 1px dashed var(--color-border);
+}
+
+.lab-tree > ul {
+  padding-left: 0;
+  border-left: none;
+}
+
+.lab-tree li {
+  margin: 0.3rem 0;
+}
+
+.lab-tree__answer {
+  margin-right: 0.35rem;
+  color: var(--color-text-muted);
+  font-weight: 600;
+}
+
+.lab-tree__question {
+  font-family: var(--font-mono);
+  font-weight: 600;
+}
+
+.lab-tree__leaf {
+  font-weight: 700;
+}
+
+.lab-tree__info {
+  color: var(--color-text-muted);
+  font-size: 0.8rem;
+}
+
+/* 2x2 confusion matrix */
+.lab-cm {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.86rem;
+  background: var(--color-surface);
+}
+
+.lab-cm th,
+.lab-cm td {
+  border: 1px solid var(--color-border);
+  padding: 0.4rem;
+  text-align: center;
+}
+
+.lab-cm td strong {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 1.05rem;
+}
+
+.lab-cm small {
+  color: var(--color-text-muted);
+}
+
+.lab-cm__good {
+  background: var(--color-success-soft);
+}
+
+.lab-cm__bad {
+  background: var(--color-error-soft);
+}
+
+/* SVG plots */
+.lab-plot {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.lab-plot__grid {
+  stroke: var(--color-border);
+  stroke-width: 1;
+}
+
+.lab-plot__axis {
+  stroke: var(--color-text-muted);
+  stroke-width: 1.2;
+}
+
+.lab-plot__tick {
+  fill: var(--color-text-muted);
+  font-size: 14px;
+}
+
+.lab-plot__axis-label {
+  fill: var(--color-text);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.lab-plot__diagonal {
+  stroke: var(--color-text-muted);
+  stroke-width: 1.5;
+  stroke-dasharray: 6 5;
+}
+
+.lab-plot__point {
+  fill: #2563eb;
+  fill-opacity: 0.7;
+  stroke: #ffffff;
+  stroke-width: 1;
+}
+
+/* Coefficient bars */
+.lab-bars {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.lab-bars__label {
+  fill: var(--color-text);
+  font-size: 13px;
+  font-family: var(--font-mono);
+}
+
+.lab-bars__value {
+  fill: var(--color-text-muted);
+  font-size: 12px;
+  font-family: var(--font-mono);
+}
+
+.lab-bars__zero {
+  stroke: var(--color-text-muted);
+  stroke-width: 1.2;
+}
+
+.lab-bars__bar--positive {
+  fill: var(--color-primary);
+}
+
+.lab-bars__bar--negative {
+  fill: var(--color-warning);
+}
+
+@media (max-width: 480px) {
+  .lab__metrics {
+    font-size: 0.78rem;
+  }
+
+  .lab__metrics th,
+  .lab__metrics td {
+    padding: 0.35rem 0.4rem;
+  }
+}

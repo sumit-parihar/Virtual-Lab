@@ -69,6 +69,8 @@ def _create(db: Session, c: ExperimentContent) -> Experiment:
         objective=c.objective,
         notes=c.notes,
         video_url=c.video_url,
+        lab_config=c.lab_config,
+        dataset_info=c.dataset_info,
         starter_code=c.starter_code,
         allowed_imports=c.allowed_imports,
         code_problem_statement=c.code_problem_statement,

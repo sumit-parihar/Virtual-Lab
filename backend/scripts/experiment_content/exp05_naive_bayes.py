@@ -1,5 +1,7 @@
 """Experiment 5: Naive Bayes Classification. Content approved for loading; edit here and re-run `python -m scripts.load_experiments`."""
 
+from .datasets import dataset_info
+
 TITLE = 'Naive Bayes Classification'
 SLUG = 'naive-bayes'
 
@@ -407,3 +409,82 @@ STARTER_CODE = 'result = None  # store your final answer in this variable\n\n# W
 
 # Solution used to compute the expected result (see solutions/ex05_naive_bayes.py).
 SOLUTION_FILE = 'ex05_naive_bayes.py'
+
+# "About the dataset" panel (Guided Lab and Code Exercise), data only: see datasets.py.
+DATASET_INFO = dataset_info("wine")
+
+# Guided Lab: data only (no code); the lab is frontend/src/components/guided-labs/NaiveBayesLab.jsx.
+# Trained on the Code Exercise's training rows; numbers in the steps match scikit-learn's GaussianNB exactly.
+LAB_CONFIG = {
+    "kind": "naive-bayes",
+    "intro": (
+        "Choose a wine measurement and move its value. For each grower, Naive Bayes multiplies the prior by the "
+        "likelihood of that value and picks the largest product. Add a second measurement to see the \"naive\" "
+        "multiplication of likelihoods. Nothing you do here is saved."
+    ),
+    "dataset_url": "/datasets/wine.csv",
+    "split_url": "/datasets/wine_split.json",
+    "target_column": "target",
+    "classes": [
+        {"value": 0, "label": "grower 0"},
+        {"value": 1, "label": "grower 1"},
+        {"value": 2, "label": "grower 2"},
+    ],
+    "features": [
+        {"name": "alcohol", "label": "alcohol %", "step": 0.05, "start": 13.0},
+        {"name": "flavanoids", "label": "flavanoids", "step": 0.05, "start": 2.5},
+        {"name": "malic_acid", "label": "malic acid", "step": 0.05, "start": 2.3},
+        {"name": "color_intensity", "label": "colour intensity", "step": 0.1, "start": 5.0},
+        {"name": "hue", "label": "hue", "step": 0.01, "start": 0.95},
+        {"name": "proline", "label": "proline", "step": 10, "start": 750},
+    ],
+    "first": "alcohol",
+    "second": None,
+    "steps": [
+        {
+            "task": "Look at the three bell curves for alcohol. Which grower makes the strongest wines, and which the "
+                    "weakest?",
+            "explanation": "Grower 0's curve is centred highest (about 13.7%), grower 1's lowest (about 12.3%) and "
+                           "grower 2's in between (about 13.1%). Training Gaussian Naive Bayes only means computing, for "
+                           "each grower, the mean and the variance of each measurement, plus the prior.",
+        },
+        {
+            "task": "With alcohol = 13.0, read the table: prior, likelihood, prior × likelihood and posterior. Which "
+                    "grower is predicted, and how sure is the model?",
+            "explanation": "For each grower the model multiplies the prior by the likelihood (the height of that "
+                           "grower's curve at 13.0). Grower 2 has the largest product, so it is predicted, but the "
+                           "posteriors are only about 21%, 31% and 48%: the curves overlap, so the model is unsure. "
+                           "P(x) is the same for every grower, so it is not needed to compare them; dividing by the "
+                           "total just turns the products into posteriors that add up to 100%.",
+        },
+        {
+            "task": "Move the alcohol value to 12.0, then to 14.0.",
+            "explanation": "At 12.0 grower 1's curve is by far the highest, and its posterior is about 90%. At 14.0 "
+                           "grower 0 takes over (about 78%). The posterior follows whichever curve is highest, weighted "
+                           "by the prior.",
+        },
+        {
+            "task": "Look at the Prior column. Where do these numbers come from?",
+            "explanation": "The prior is how common each grower is among the training wines: 45, 57 and 40 of the 142 "
+                           "wines, so about 0.32, 0.40 and 0.28. Before looking at any measurement, grower 1 is "
+                           "slightly more likely simply because it is more common.",
+        },
+        {
+            "task": "Set alcohol back to 13.0 and choose flavanoids as the second measurement. Move its value to 0.8, "
+                    "then to 2.5.",
+            "explanation": "The likelihood is now the product of two curve heights, one per measurement. This is the "
+                           "\"naive\" step: the measurements are treated as independent once the grower is known. With "
+                           "flavanoids = 0.8 the model is about 95% sure of grower 2; with 2.5 grower 2 drops to about "
+                           "0% and grower 0 and grower 1 share the rest. A second measurement can settle what one alone "
+                           "could not.",
+        },
+        {
+            "task": "Compare the test accuracy with alcohol alone and with alcohol and flavanoids.",
+            "explanation": "Alcohol alone gives about 80.6% on the test wines; adding flavanoids gives about 91.7%. "
+                           "The Code Exercise uses all 13 measurements and classifies every test wine correctly. The "
+                           "independence assumption is rarely exactly true, but the classifier only needs to rank the "
+                           "growers, so it often works well. Its posteriors are often too extreme (0% here), so treat "
+                           "them as a ranking more than as exact probabilities.",
+        },
+    ],
+}

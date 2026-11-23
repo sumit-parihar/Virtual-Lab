@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
 import { authApi } from "../api/auth.js";
+import AuthAside from "../components/AuthAside.jsx";
 
 export default function ChangePassword() {
   const { user, loading: authLoading, refreshUser } = useAuth();
@@ -43,6 +44,7 @@ export default function ChangePassword() {
 
   return (
     <div className="auth-container">
+      <AuthAside />
       <div className="auth-card">
         <h1 className="auth-title">{forced ? "Set your password" : "Change password"}</h1>
         <p className="auth-subtitle">
