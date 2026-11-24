@@ -12,10 +12,12 @@ students get 403) and is scoped to the batch the instructor is assigned to.
   GET /instructor/batches/{batch_id}/experiments/{experiment_id}/assignment-status
   GET /instructor/batches/{batch_id}/experiments/{experiment_id}/assignment-status/export
   GET /instructor/batches/{batch_id}/experiments/{experiment_id}/assignment-status/{student_id}
+  GET /instructor/batches/{batch_id}/study-export
 
-Pre-Quiz and Post-Quiz scores are never returned. Saved assignment scores are
-shown immediately (no reveal policy), as a percentage. Downloads are Excel (.xlsx)
-files for the open experiment or assignment only.
+Pre-Quiz and Post-Quiz scores are not shown on any page; they appear only in the study
+export (one Excel file for the whole batch, used for the learner study). Saved assignment
+scores are shown immediately (no reveal policy), as a percentage. The other downloads are
+Excel (.xlsx) files for the open experiment or assignment only.
 """
 import re
 import uuid
@@ -34,6 +36,7 @@ from app.models import (
     Quiz,
     QuizSubmission,
     QuizType,
+    StudentQuizProgress,
     User,
     UserRole,
 )
@@ -304,6 +307,69 @@ def export_assignment_status(
     return _xlsx_response(
         batch, exp, "assignment_scores", "Assignment Scores",
         ["URN", "Student Name", "Marks (%)"], rows, [16, 40, 22],
+    )
+
+
+# ── Study export (learner study, whole batch) ─────────────────────────────────
+
+STUDY_HEADERS = [
+    "URN", "Student Name", "Exp. No.", "Experiment",
+    "Pre-Quiz First (%)", "Pre-Quiz Best (%)", "Post-Quiz First (%)", "Post-Quiz Best (%)",
+    "Assignment (%)", "Sections Completed", "Status",
+]
+
+
+def _quiz_progress(student_id: uuid.UUID, quiz: Quiz | None, db: Session) -> StudentQuizProgress | None:
+    if quiz is None:
+        return None
+    return (
+        db.query(StudentQuizProgress)
+        .filter(StudentQuizProgress.student_id == student_id, StudentQuizProgress.quiz_id == quiz.id)
+        .first()
+    )
+
+
+@router.get("/batches/{batch_id}/study-export")
+def export_study_data(batch_id: uuid.UUID, db: Session = Depends(get_db), user: User = Depends(_instructor_only)):
+    """One Excel file for the learner study: a row per student and published experiment with the
+    Pre-Quiz and Post-Quiz first-attempt and best scores, the assignment score, sections completed
+    and status. A blank score means not attempted (or, for a first attempt, not recorded)."""
+    batch = _own_batch(batch_id, user, db)
+    exps = (
+        db.query(Experiment).filter(Experiment.is_published == True)  # noqa: E712
+        .order_by(Experiment.order_index).all()
+    )
+    rows = []
+    for s in _batch_students(batch.id, db):
+        progress = {p.experiment_id: p for p in derive_experiment_progress(s.id, exps, db, student_view=True)}
+        for exp in exps:
+            p = progress[exp.id]
+            pre = _quiz_progress(s.id, _quiz_of(exp, QuizType.pre), db)
+            post = _quiz_progress(s.id, _quiz_of(exp, QuizType.post), db)
+            done = sum(1 for sec in p.sections if sec.completed)
+            rows.append([
+                s.roll_number or "", _name_label(s), exp.order_index, exp.title,
+                pre.first_score if pre else None, pre.best_score if pre else None,
+                post.first_score if post else None, post.best_score if post else None,
+                p.assignment_score,
+                f"{done} of {len(p.sections)}", STATUS_LABEL[p.overall_status],
+            ])
+
+    details = [
+        ("Batch", batch.name),
+        ("Academic Year", batch.academic_year),
+        ("Contents", "Learner study data for all published experiments"),
+    ]
+    content = build_sheet(
+        "Study Data", details, STUDY_HEADERS, rows,
+        [16, 32, 9, 34, 14, 14, 15, 15, 14, 14, 16],
+        percent_columns={4, 5, 6, 7, 8},
+    )
+    safe = re.sub(r"[^A-Za-z0-9_-]+", "_", f"{batch.name}_{batch.academic_year}")
+    return Response(
+        content=content,
+        media_type=XLSX_MEDIA_TYPE,
+        headers={"Content-Disposition": f'attachment; filename="batch_{safe}_study_data.xlsx"'},
     )
 
 

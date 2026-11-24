@@ -1,6 +1,14 @@
 import { useMemo, useState } from "react";
 import { useOutletContext } from "react-router-dom";
+import { instructorApi } from "../api/instructor.js";
+import { saveBlob } from "../utils/download.js";
 import "./InstructorConsole.css";
+
+// Mirrors the server's file name: batch_<name>_<year>_study_data.xlsx
+function studyFileName(batch) {
+  const safe = `${batch.name}_${batch.academic_year}`.replace(/[^A-Za-z0-9_-]+/g, "_");
+  return `batch_${safe}_study_data.xlsx`;
+}
 
 const PAGE_SIZE = 10;
 
@@ -11,6 +19,20 @@ export default function InstructorBatchInfo() {
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState({ key: "urn", dir: "asc" });
   const [page, setPage] = useState(1);
+  const [downloading, setDownloading] = useState(false);
+  const [downloadError, setDownloadError] = useState("");
+
+  async function handleStudyDownload() {
+    setDownloading(true);
+    setDownloadError("");
+    try {
+      saveBlob(await instructorApi.exportStudyData(batch.id), studyFileName(batch));
+    } catch {
+      setDownloadError("The download failed. Please try again.");
+    } finally {
+      setDownloading(false);
+    }
+  }
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -45,7 +67,19 @@ export default function InstructorBatchInfo() {
 
   return (
     <div>
-      <h1 className="ic-page__title">Batch</h1>
+      <div className="ic-header">
+        <h1 className="ic-page__title">Batch</h1>
+        <button
+          type="button"
+          className="btn btn--primary btn--sm"
+          onClick={handleStudyDownload}
+          disabled={downloading}
+          title="Pre-Quiz and Post-Quiz (first and best), assignment, sections completed and status for every student and experiment"
+        >
+          {downloading ? "Preparing…" : "Download study data (Excel)"}
+        </button>
+      </div>
+      {downloadError && <div className="alert alert--error">{downloadError}</div>}
 
       <div className="card ic-info">
         <div className="ic-info__item">

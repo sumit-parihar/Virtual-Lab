@@ -22,6 +22,11 @@ In a batch, open **Assignment** and choose one. You see the questions with the c
 Click **Assignment Status** for each student's marks (a percentage) or **Not Submitted**. **View Submission** opens that student's
 answers, marked correct or incorrect. It is disabled until the student has submitted. **Download Excel** saves the scores.
 
+## Study data
+On a batch's **Batch** page, **Download study data (Excel)** saves one file for the learner study: for every student and
+experiment, the Pre-Quiz and Post-Quiz scores (first attempt and best), the assignment score, sections completed and status.
+A blank score means not attempted.
+
 ## What you do not see
-Students' Pre-Quiz and Post-Quiz scores are private and are not shown. You cannot add or change students, batches or experiments:
-ask the administrator.
+Students' Pre-Quiz and Post-Quiz scores are not shown on any page; they appear only in the study data file. You cannot add
+or change students, batches or experiments: ask the administrator.

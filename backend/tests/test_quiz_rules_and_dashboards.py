@@ -5,6 +5,7 @@ import uuid
 
 
 from helpers import (
+    complete_static_sections,
     get_experiment,
     make_experiment,
     make_user,
@@ -62,6 +63,9 @@ def test_pre_quiz_allows_unlimited_attempts_but_stores_only_best_score(client, d
 def test_post_quiz_also_uses_best_score_only_storage(client, db):
     exp = make_experiment(db)
     student = make_user(db)
+    # The Post-Quiz opens after the Pre-Quiz and every content section.
+    assert submit_quiz(client, student, exp, "pre").status_code == 201
+    complete_static_sections(client, student, exp)
 
     low = submit_quiz(client, student, exp, "post", correct=False)
     high = submit_quiz(client, student, exp, "post", correct=True)

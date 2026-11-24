@@ -5,8 +5,11 @@ sees only the batch they are assigned to. Each batch has exactly one instructor 
 instructor can have several batches.
 
 Instructors cannot add or edit batches, students or experiment content, and cannot attempt quizzes or submit
-assignments. Students' Pre-Quiz and Post-Quiz scores are never shown to instructors. Saved assignment scores are
-shown immediately, as percentages.
+assignments. Students' Pre-Quiz and Post-Quiz scores are not shown on any page; they appear only in the **study
+export** (Batch page, **Download study data (Excel)**, `GET /instructor/batches/{id}/study-export`): one row per student
+and published experiment with URN, name, Pre-Quiz and Post-Quiz first and best scores, assignment score, sections
+completed ("7 of 9") and status. It is used for the learner study, where the Research Assistant is the batch's
+instructor. Saved assignment scores are shown immediately, as percentages.
 
 ## Navigation
 - Navbar: **Home**, **Batches**, and a profile icon with **My Profile** and **Log out**.

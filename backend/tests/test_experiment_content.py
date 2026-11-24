@@ -279,6 +279,12 @@ def test_code_answers_are_checked_exactly(client, db, slug):
     student = make_user(db, UserRole.student)
     exp = db.query(Experiment).filter_by(slug=slug).one()
     expected = expected_results()[slug]
+    # The Code Exercise opens only after the Pre-Quiz is submitted.
+    pre = next(q for q in exp.quizzes if q.quiz_type == QuizType.pre)
+    answers = [
+        {"question_id": str(q.id), "selected_option_id": str(q.options[0].id)} for q in pre.questions
+    ]
+    assert client.post(f"/quizzes/{pre.id}/submit", json={"answers": answers}, headers=student.headers).status_code == 201
 
     def submit(output):
         body = {"experiment_id": str(exp.id), "submitted_code": "result = ...", "client_output": output}

@@ -124,9 +124,7 @@ export default function InstructorExperiment() {
           <>
             <h2 className="ic-section__heading">{SECTION_LABELS.video}</h2>
             {experiment.video_url ? (
-              <div className="ic-video">
-                <VideoPlayer url={experiment.video_url} />
-              </div>
+              <VideoPlayer url={experiment.video_url} frameClassName="ic-video" />
             ) : (
               <p className="ic-placeholder">No video available for this experiment yet.</p>
             )}

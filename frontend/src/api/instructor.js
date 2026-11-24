@@ -34,6 +34,11 @@ export const instructorApi = {
       .get(`${exp(batchId, experimentId)}/assignment-status/export`, { responseType: "blob" })
       .then((r) => r.data),
 
+  // Learner study: one Excel file for the whole batch (first and best Pre/Post-Quiz scores, assignment,
+  // sections completed and status for every student and published experiment).
+  exportStudyData: (batchId) =>
+    api.get(`/instructor/batches/${batchId}/study-export`, { responseType: "blob" }).then((r) => r.data),
+
   submission: (batchId, experimentId, studentId) =>
     api.get(`${exp(batchId, experimentId)}/assignment-status/${studentId}`).then((r) => r.data),
 };

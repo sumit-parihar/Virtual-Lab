@@ -8,7 +8,8 @@ What was built, in order. Each step that changed the database came with a one-of
    section with `experiments.overview`; assignment prerequisites include the manual sections and Guided Lab.
    (`migrate_student_section_tracking`)
 2. **Quiz best score**: Pre-Quiz and Post-Quiz keep one best-score record per student and quiz in
-   `student_quiz_progress`; no attempt history. (`migrate_quiz_best_score_only`)
+   `student_quiz_progress`; no attempt history. (`migrate_quiz_best_score_only`) Later the first-attempt score was
+   added for the learner study (`migrate_quiz_first_attempt`, see 24).
 3. **Quiz screens**: Start Now screen, This Attempt versus My Best Score, completion tick after the saved status is
    fetched back.
 4. **Fixes**: Code Exercise tick and saved state restored; the Assignment click re-fetches status from the backend;
@@ -65,4 +66,8 @@ What was built, in order. Each step that changed the database came with a one-of
     Random Forest, SVM, K-Means and ANN, each with theory, three quizzes of 10 questions and a Code Exercise (exact match, answer in
     `result`). Loaded with `python -m scripts.load_experiments` from `backend/scripts/experiment_content/`; the old demo experiments and
     the single-experiment loader were removed. `npm run compute:expected` recomputes the expected answers in the browser Python.
+24. **Learner-study support**: the Pre-Quiz and Post-Quiz also keep the first-attempt score (`migrate_quiz_first_attempt`); the
+    learning order is enforced (content after the Pre-Quiz, Post-Quiz after the content, Assignment after the Post-Quiz); the
+    instructor's Batch page downloads one study-data Excel file per batch; the video has Speed and Quality (HD / Data saver 480p)
+    choices, with `exp01-simple-linear-regression-480p.mp4` added.
 

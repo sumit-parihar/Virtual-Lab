@@ -148,6 +148,63 @@ def derive_experiment_progress(
     return results
 
 
+# Learning order (learner study): the content sections open only after the Pre-Quiz is
+# submitted, so its first attempt is a true "before" score; the Post-Quiz opens only after
+# every earlier section is complete; the Assignment opens after the Post-Quiz.
+CONTENT_SECTION_KEYS: tuple[str, ...] = ("video", "theory", "guided-lab", "code-exercise")
+
+
+def _quiz_of_type(exp: Experiment, quiz_type: QuizType) -> Quiz | None:
+    return next((q for q in exp.quizzes if q.quiz_type == quiz_type), None)
+
+
+def _quiz_submitted(student_id: uuid.UUID, quiz: Quiz | None, db: Session) -> bool:
+    if quiz is None:
+        return False
+    return db.query(StudentQuizProgress.id).filter(
+        StudentQuizProgress.student_id == student_id,
+        StudentQuizProgress.quiz_id == quiz.id,
+    ).first() is not None
+
+
+def content_locked(student_id: uuid.UUID, exp: Experiment, db: Session) -> bool:
+    """True while the experiment has a Pre-Quiz that this student has not submitted yet.
+
+    Video, Theory, Guided Lab and Code Exercise stay locked until then (they cannot be
+    marked completed and code cannot be submitted). Without a Pre-Quiz nothing is locked.
+    """
+    pre_q = _quiz_of_type(exp, QuizType.pre)
+    return pre_q is not None and not _quiz_submitted(student_id, pre_q, db)
+
+
+def missing_post_quiz_prerequisites(
+    student_id: uuid.UUID,
+    exp: Experiment,
+    db: Session,
+) -> list[str]:
+    """Unmet steps before the Post-Quiz, in workflow order.
+
+    Every manually tracked section (including the Code Exercise) and the Pre-Quiz, when
+    the experiment has one. Shared by experiment details and quiz submission.
+    """
+    completed_static = get_completed_section_keys(student_id, exp.id, db)
+    pre_q = _quiz_of_type(exp, QuizType.pre)
+    pre_missing = pre_q is not None and not _quiz_submitted(student_id, pre_q, db)
+
+    # The order reflects the experiment flow. Change it only together with the
+    # approved section ordering in the student workspace.
+    missing: list[str] = []
+    for key in ("overview", "aim-objectives"):
+        if key not in completed_static:
+            missing.append(STATIC_SECTION_LABELS[key])
+    if pre_missing:
+        missing.append("Pre-Quiz")
+    for key in CONTENT_SECTION_KEYS:
+        if key not in completed_static:
+            missing.append(STATIC_SECTION_LABELS[key])
+    return missing
+
+
 def missing_assignment_prerequisites(
     student_id: uuid.UUID,
     exp: Experiment,
@@ -159,44 +216,10 @@ def missing_assignment_prerequisites(
     Pre/post quizzes are prerequisites when they are defined.
     This function is shared by experiment details, quiz access and submission.
     """
-    completed_static = get_completed_section_keys(student_id, exp.id, db)
-    quiz_types = {q.quiz_type.value: q for q in exp.quizzes}
-    pre_q = quiz_types.get(QuizType.pre.value)
-    post_q = quiz_types.get(QuizType.post.value)
-
-    pre_submitted = bool(pre_q) and db.query(StudentQuizProgress.id).filter(
-        StudentQuizProgress.student_id == student_id,
-        StudentQuizProgress.quiz_id == pre_q.id,
-    ).first() is not None
-    post_submitted = bool(post_q) and db.query(StudentQuizProgress.id).filter(
-        StudentQuizProgress.student_id == student_id,
-        StudentQuizProgress.quiz_id == post_q.id,
-    ).first() is not None
-
-    # The order reflects the existing experiment flow. Change it only together
-    # with the approved section ordering in the student workspace.
-    ordered_requirements = [
-        ("overview", STATIC_SECTION_LABELS["overview"], True),
-        ("aim-objectives", STATIC_SECTION_LABELS["aim-objectives"], True),
-        ("pre-quiz", "Pre-Quiz", pre_q is not None and not pre_submitted),
-        ("video", STATIC_SECTION_LABELS["video"], True),
-        ("theory", STATIC_SECTION_LABELS["theory"], True),
-        ("guided-lab", STATIC_SECTION_LABELS["guided-lab"], True),
-        ("code-exercise", STATIC_SECTION_LABELS["code-exercise"], True),
-        ("post-quiz", "Post-Quiz", post_q is not None and not post_submitted),
-    ]
-
-    missing: list[str] = []
-    for key, label, required in ordered_requirements:
-        if not required:
-            continue
-        if key in STATIC_SECTION_LABELS:
-            if key not in completed_static:
-                missing.append(label)
-        else:
-            # Dynamic activities have already encoded their missing status in
-            # the third tuple element above.
-            missing.append(label)
+    missing = missing_post_quiz_prerequisites(student_id, exp, db)
+    post_q = _quiz_of_type(exp, QuizType.post)
+    if post_q is not None and not _quiz_submitted(student_id, post_q, db):
+        missing.append("Post-Quiz")
     return missing
 
 

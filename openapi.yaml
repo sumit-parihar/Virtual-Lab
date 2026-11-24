@@ -724,6 +724,23 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  /instructor/batches/{batch_id}/study-export:
+    get:
+      tags: [instructor]
+      summary: Excel (.xlsx) of learner-study data for the whole batch
+      description: >-
+        The only place Pre-Quiz and Post-Quiz scores reach an instructor. One row per student and published experiment:
+        URN, Student Name, Exp. No., Experiment, Pre-Quiz First (%), Pre-Quiz Best (%), Post-Quiz First (%),
+        Post-Quiz Best (%), Assignment (%), Sections Completed ("7 of 9"), Status. A blank score means not attempted
+        (or, for a first attempt saved before first scores were recorded, unknown).
+      x-status: implemented
+      parameters:
+        - { name: batch_id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200": { description: "Excel file batch_<name>_<year>_study_data.xlsx. Merged rows on top: Batch, Academic Year, Contents." }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /instructor/batches/{batch_id}/experiments/{experiment_id}/assignment-status:
     get:
       tags: [instructor]
@@ -934,6 +951,18 @@ components:
               type: array
               items: { type: string }
               description: Steps still to complete, e.g. ["Pre-Quiz", "Code Exercise"]. Empty when unlocked.
+            content_locked:
+              type: boolean
+              description: >-
+                Students only. True until the Pre-Quiz is submitted; Video, Theory, Guided Lab and Code Exercise cannot be
+                marked completed (403) and code cannot be submitted (403) meanwhile.
+            post_quiz_locked:
+              type: boolean
+              description: Students only. True until Overview, Aim, the Pre-Quiz and every content section are done; the Post-Quiz questions are then empty and submitting returns 403.
+            post_quiz_missing_steps:
+              type: array
+              items: { type: string }
+              description: Steps still to complete before the Post-Quiz, in workflow order. Empty when unlocked.
             section_completions:
               type: object
               additionalProperties: { type: boolean }

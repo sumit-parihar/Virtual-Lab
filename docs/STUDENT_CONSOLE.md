@@ -35,7 +35,20 @@ confirms it. A section an experiment does not have is not counted. Section names
 ## Pre-Quiz and Post-Quiz
 - Opening the quiz first shows the experiment number, experiment title, **My Best Score** (or **Not attempted**) and
   a **Start Now** button. The questions appear only after Start Now.
-- Unlimited attempts. The backend keeps one best-score record per student and quiz (no attempt history).
+- Unlimited attempts. The backend keeps one record per student and quiz with the first-attempt score (set once, for
+  the learner study) and the best score (no attempt history). The student sees only the best score.
+
+## Learning order
+- Overview and Aim are always open.
+- Video, Theory, Guided Lab and Code Exercise are locked until the Pre-Quiz is submitted (lock icon in the list, a note
+  with **Go to the Pre-Quiz**, no Mark Completed; the server also refuses their completion and code submissions).
+- The Post-Quiz is locked, and its questions are not sent, until Overview, Aim, the Pre-Quiz and every content section
+  are done; the note lists what is missing.
+- The Assignment opens after the Post-Quiz, as before.
+
+## Video
+- Under the video: **Speed** (0.75× to 2×) and, when the file `name-480p.mp4` exists next to `name.mp4`, **Quality**
+  (HD 1080p / Data saver 480p). Switching quality keeps the position; both choices are remembered per browser.
 - After submitting, the result shows **This Attempt** and **My Best Score**; the section is completed. **Try Again**
   returns to the first screen. After switching tabs or refreshing, only the saved best score is shown.
 

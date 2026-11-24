@@ -135,16 +135,17 @@ def test_assignment_stays_locked_until_code_exercise_is_marked_completed(client,
     exp = _make_experiment(db)
     student = _make_user(db)
 
+    assert _submit_quiz(client, student, exp, "pre").status_code == 201
     for section_key in ("overview", "aim-objectives", "theory", "video", "guided-lab"):
         client.post(f"/experiments/{exp.slug}/sections/{section_key}/complete", headers=student.headers)
-    assert _submit_quiz(client, student, exp, "pre").status_code == 201
-    assert _submit_quiz(client, student, exp, "post").status_code == 201
-    # A matched code result alone does not complete the Code Exercise.
+    # A matched code result alone does not complete the Code Exercise, so the Post-Quiz
+    # (and with it the Assignment) stays locked.
     _add_code_submission(db, student, exp, SubmissionStatus.matched)
+    assert _submit_quiz(client, student, exp, "post").status_code == 403
 
     data = _get_experiment(client, student, exp)
     assert data["assignment_locked"] is True
-    assert data["assignment_missing_steps"] == ["Code Exercise"]
+    assert data["assignment_missing_steps"] == ["Code Exercise", "Post-Quiz"]
     assert _submit_quiz(client, student, exp, "assignment").status_code == 403
 
 
@@ -152,8 +153,8 @@ def test_assignment_opens_when_everything_is_done_without_a_code_match(client, d
     exp = _make_experiment(db)
     student = _make_user(db)
 
-    _complete_static_sections(client, student, exp)  # includes Mark Completed on the Code Exercise
     assert _submit_quiz(client, student, exp, "pre").status_code == 201
+    _complete_static_sections(client, student, exp)  # includes Mark Completed on the Code Exercise
     assert _submit_quiz(client, student, exp, "post").status_code == 201
     # No code submission at all: matching is not required.
 
@@ -170,13 +171,13 @@ def test_code_exercise_is_required_even_without_an_expected_result(client, db):
     exp = _make_experiment(db, with_spec=False)
     student = _make_user(db)
 
+    assert _submit_quiz(client, student, exp, "pre").status_code == 201
     for section_key in ("overview", "aim-objectives", "theory", "video", "guided-lab"):
         client.post(f"/experiments/{exp.slug}/sections/{section_key}/complete", headers=student.headers)
-    assert _submit_quiz(client, student, exp, "pre").status_code == 201
-    assert _submit_quiz(client, student, exp, "post").status_code == 201
-    assert _get_experiment(client, student, exp)["assignment_missing_steps"] == ["Code Exercise"]
+    assert _get_experiment(client, student, exp)["assignment_missing_steps"] == ["Code Exercise", "Post-Quiz"]
 
     client.post(f"/experiments/{exp.slug}/sections/code-exercise/complete", headers=student.headers)
+    assert _submit_quiz(client, student, exp, "post").status_code == 201
     assert _get_experiment(client, student, exp)["assignment_locked"] is False
 
 

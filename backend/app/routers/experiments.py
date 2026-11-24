@@ -30,8 +30,11 @@ from app.schemas.experiment import (
 )
 from app.schemas.section_completion import SectionCompletionOut
 from app.services.progress import (
+    CONTENT_SECTION_KEYS,
     assignment_review,
+    content_locked,
     missing_assignment_prerequisites,
+    missing_post_quiz_prerequisites,
     student_quiz_status,
 )
 from app.services.section_tracking import (
@@ -118,6 +121,18 @@ def get_experiment(
             else:
                 quiz_out.my_best_score = saved_score
 
+    # Learning order (students only): content opens after the Pre-Quiz; the Post-Quiz after the content.
+    if current_user.role == UserRole.student:
+        detail.content_locked = content_locked(current_user.id, exp, db)
+        if any(q.quiz_type == QuizType.post for q in exp.quizzes):
+            post_missing = missing_post_quiz_prerequisites(current_user.id, exp, db)
+            if post_missing:
+                detail.post_quiz_locked = True
+                detail.post_quiz_missing_steps = post_missing
+                for quiz in detail.quizzes:
+                    if quiz.quiz_type == QuizType.post:
+                        quiz.questions = []
+
     # Assignment lock (students only): until the earlier steps are done the assignment is hidden completely.
     if current_user.role == UserRole.student and any(q.quiz_type == QuizType.assignment for q in exp.quizzes):
         missing = missing_assignment_prerequisites(current_user.id, exp, db)
@@ -154,6 +169,13 @@ def mark_section_completed(
     exp = _get_experiment_or_404(slug, db)
     if not exp.is_published:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Experiment not found")
+
+    # Video, Theory, Guided Lab and Code Exercise open only after the Pre-Quiz is submitted.
+    if section_key in CONTENT_SECTION_KEYS and content_locked(current_user.id, exp, db):
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            "This section is locked. Submit the Pre-Quiz first.",
+        )
 
     existing = db.query(SectionCompletion).filter(
         SectionCompletion.student_id == current_user.id,

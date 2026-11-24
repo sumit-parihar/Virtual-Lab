@@ -24,6 +24,7 @@ def _code_ticked(client, student, exp) -> bool:
 def test_code_exercise_tick_only_after_mark_completed(client, db):
     exp = make_experiment(db)
     student = make_user(db)
+    assert submit_quiz(client, student, exp, "pre").status_code == 201  # content opens after the Pre-Quiz
     assert _code_ticked(client, student, exp) is False
 
     # Submitting code never ticks the section, whether it matches or not.
@@ -42,6 +43,7 @@ def test_code_exercise_tick_not_shown_to_other_students(client, db):
     exp = make_experiment(db)
     student_a = make_user(db)
     student_b = make_user(db)
+    assert submit_quiz(client, student_a, exp, "pre").status_code == 201
     client.post(f"/experiments/{exp.slug}/sections/code-exercise/complete", headers=student_a.headers)
 
     assert _code_ticked(client, student_a, exp) is True

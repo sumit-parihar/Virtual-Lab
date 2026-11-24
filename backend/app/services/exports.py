@@ -31,12 +31,14 @@ def build_sheet(
     headers: list[str],
     rows: list[list],
     widths: list[float],
+    percent_columns: set[int] | None = None,
 ) -> bytes:
     """Return an .xlsx file as bytes.
 
     details: (label, value) pairs, each written as "label: value" in one merged row
     headers/rows/widths: the table; widths are column widths in characters.
-    A numeric cell is shown with a trailing % sign (the value stays a number).
+    A numeric cell is shown with a trailing % sign (the value stays a number). With
+    percent_columns (0-based column indexes), only those columns get the % sign.
     """
     wb = Workbook()
     ws = wb.active
@@ -74,7 +76,8 @@ def build_sheet(
             _set(cell, value)
             cell.border = _BORDER
             cell.alignment = _LEFT
-            if isinstance(value, (int, float)) and not isinstance(value, bool):
+            is_number = isinstance(value, (int, float)) and not isinstance(value, bool)
+            if is_number and (percent_columns is None or col - 1 in percent_columns):
                 cell.number_format = 'General"%"'
 
     ws.freeze_panes = ws.cell(row=header_row + 1, column=1)

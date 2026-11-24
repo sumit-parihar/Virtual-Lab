@@ -184,6 +184,9 @@
 .exp-page__lock-note ul {
   margin: 0.5rem 0 0 1.25rem;
 }
+.exp-page__lock-action {
+  margin-top: 0.75rem;
+}
 .section-completion__error {
   margin: 0;
 }

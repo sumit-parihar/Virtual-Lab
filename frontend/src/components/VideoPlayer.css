@@ -1,0 +1,37 @@
+/* Speed and quality controls under the experiment video. */
+.video-player__tools {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.75rem 1.25rem;
+  margin-top: 0.75rem;
+}
+.video-player__control {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  color: var(--color-text-muted, inherit);
+}
+.video-player__control .form-select {
+  width: auto;
+  min-width: 7.5rem;
+  padding-top: 0.35rem;
+  padding-bottom: 0.35rem;
+}
+@media (max-width: 600px) {
+  .video-player__tools {
+    justify-content: stretch;
+  }
+  .video-player__control {
+    flex: 1 1 9rem;
+    justify-content: space-between;
+  }
+  .video-player__control span {
+    min-width: 3.75rem; /* keeps the Speed and Quality boxes aligned */
+  }
+  .video-player__control .form-select {
+    flex: 1;
+    min-width: 0;
+  }
+}

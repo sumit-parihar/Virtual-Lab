@@ -1,8 +1,10 @@
-"""Best-score-only records for student Pre-Quiz and Post-Quiz self-assessments.
+"""Best-score records (plus the first attempt) for Pre-Quiz and Post-Quiz self-assessments.
 
 Unlike QuizSubmission, this table does not keep one row per attempt or store
 submitted answer choices. A single row records that the student has submitted
-the quiz and the best score achieved so far.
+the quiz, the score of the very first attempt (kept for the learner study's
+pre-test/post-test comparison and never changed afterwards) and the best score
+achieved so far.
 """
 import uuid
 from datetime import datetime
@@ -24,6 +26,10 @@ class StudentQuizProgress(Base, UUIDPKMixin, TimestampMixin):
         ForeignKey("quizzes.id", ondelete="CASCADE"), nullable=False
     )
     best_score: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    # Score and time of the first attempt. Set once when the row is created; NULL only for
+    # rows saved before this column existed (their first attempt was not recorded).
+    first_score: Mapped[float | None] = mapped_column(Float, nullable=True)
+    first_submitted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     # This is the most recent successful submission time, not an attempt history.
     submitted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 

@@ -95,6 +95,7 @@ scripts that apply (each is safe to re-run), from `backend/` with the virtualenv
 ```bash
 python -m scripts.migrate_student_section_tracking   # section_completions table, experiments.overview
 python -m scripts.migrate_quiz_best_score_only       # student_quiz_progress table
+python -m scripts.migrate_quiz_first_attempt         # student_quiz_progress.first_score / first_submitted_at
 python -m scripts.migrate_one_instructor_per_batch   # one instructor per batch (stops if a batch has two)
 python -m scripts.migrate_code_problem_statement     # experiments.code_problem_statement
 python -m scripts.migrate_code_dataset_url           # experiments.code_dataset_url

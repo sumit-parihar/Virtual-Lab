@@ -169,10 +169,17 @@ The frontend has no automated tests yet; `npm run build` is the minimum check.
   file (`app/services/exports.py`, openpyxl) for only the open experiment or
   assignment, with batch, academic year, experiment number and name in merged
   cells on top of a URN / Student Name / Status-or-Marks table.
-- **Pre/post quizzes**: self-assessment, unlimited attempts. Persist one best-score
-  record per student/quiz; do not store individual attempt or answer history. The
-  student sees only the best score. Current-submission correctness may be returned
-  transiently for immediate feedback.
+- **Pre/post quizzes**: self-assessment, unlimited attempts. Persist one record per
+  student/quiz holding the **first-attempt score** (`first_score`, set once, for the
+  learner study's pre-test/post-test comparison) and the **best score**; do not store
+  individual attempt or answer history. The student sees only the best score.
+  Current-submission correctness may be returned transiently for immediate feedback.
+- **Learning order (agreed for the learner study)**: Overview and Aim are always open.
+  Video, Theory, Guided Lab and Code Exercise are locked until the Pre-Quiz is submitted
+  (`content_locked`; they cannot be marked completed and code cannot be submitted). The
+  Post-Quiz is locked, and its questions hidden, until Overview, Aim, the Pre-Quiz and every
+  content section are done (`missing_post_quiz_prerequisites`). The server enforces both
+  (`app/services/progress.py`); the UI only mirrors them. Without a Pre-Quiz nothing is locked.
 - **Assignment**: one accepted submission only (409 on a second). Its score is
   visible to the submitting student immediately. It is locked, and its
   questions are hidden, until all manual sections (including the Code Exercise)
@@ -180,6 +187,11 @@ The frontend has no automated tests yet; `npm run build` is the minimum check.
   `missing_assignment_prerequisites` in `app/services/progress.py`). A code
   match is not required. The server enforces this; the UI only mirrors it. A
   quiz the experiment does not have is skipped.
+- **Study export**: `GET /instructor/batches/{id}/study-export` (Batch page, "Download study
+  data") is the only place Pre/Post-Quiz scores reach an instructor: one Excel file per batch with
+  URN, name, first and best Pre/Post-Quiz scores, assignment score, sections completed and status
+  for every published experiment. For the learner study the Research Assistant is the study
+  batch's instructor.
 - **Code Exercise**: completed with **Mark Completed** (section key `code-exercise`), like Theory
   and Video, and counted for every experiment. The editor and Submit button remain: the student's
   answer is the value of the variable `result`, computed in the browser and compared by the

@@ -33,7 +33,7 @@ from app.schemas.quiz import (
     QuizSubmitResponse,
     QuizAnswerResult,
 )
-from app.services.progress import missing_assignment_prerequisites
+from app.services.progress import missing_assignment_prerequisites, missing_post_quiz_prerequisites
 
 router = APIRouter(tags=["quizzes"])
 
@@ -117,8 +117,10 @@ def submit_quiz(
 ):
     """
     Accept quiz answers and return current-submission correctness.
-    Pre/post (self-assessment): unlimited attempts, with only one saved best-score
-    record per student/quiz. Individual attempts and selected answers are not saved.
+    Pre/post (self-assessment): unlimited attempts, with one saved record per
+    student/quiz holding the first-attempt score and the best score. Individual
+    attempts and selected answers are not saved. The Post-Quiz is locked until the
+    earlier sections and the Pre-Quiz are complete.
     Assignment (graded): one accepted submission only; its score is visible immediately
     to the submitting student. Instructor-facing score release remains separately configured.
     """
@@ -136,6 +138,16 @@ def submit_quiz(
             raise HTTPException(
                 status.HTTP_403_FORBIDDEN,
                 "Assignment is locked. Complete these first: " + ", ".join(missing),
+            )
+
+    # The Post-Quiz opens only after every earlier section (and the Pre-Quiz) is complete,
+    # so its first attempt measures learning after the content. Enforced here too.
+    if quiz.quiz_type == QuizType.post:
+        missing = missing_post_quiz_prerequisites(current_user.id, quiz.experiment, db)
+        if missing:
+            raise HTTPException(
+                status.HTTP_403_FORBIDDEN,
+                "Post-Quiz is locked. Complete these first: " + ", ".join(missing),
             )
 
     # The graded assignment can be submitted exactly once.
@@ -201,11 +213,14 @@ def submit_quiz(
         ).with_for_update().first()
 
         if progress is None:
+            # The first attempt is recorded once, here, and never changed afterwards.
             progress = StudentQuizProgress(
                 student_id=current_user.id,
                 quiz_id=quiz_id,
                 best_score=score,
                 submitted_at=now,
+                first_score=score,
+                first_submitted_at=now,
             )
             db.add(progress)
         else:

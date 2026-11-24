@@ -22,6 +22,7 @@ from app.models.code_submission import CodeSubmission, SubmissionStatus
 from app.models.experiment import Experiment, ExperimentEvaluationSpec
 from app.models.user import UserRole
 from app.schemas.code_submission import CodeSubmissionCreate, CodeSubmissionOut
+from app.services.progress import content_locked
 from datetime import datetime, timezone
 
 router = APIRouter(prefix="/code_submissions", tags=["code_submissions"])
@@ -76,6 +77,13 @@ def create_code_submission(
     exp = db.get(Experiment, payload.experiment_id)
     if exp is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Experiment not found")
+
+    # The Code Exercise opens only after the Pre-Quiz is submitted (learning order).
+    if content_locked(current_user.id, exp, db):
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            "The Code Exercise is locked. Submit the Pre-Quiz first.",
+        )
 
     spec: ExperimentEvaluationSpec | None = exp.evaluation_spec
 

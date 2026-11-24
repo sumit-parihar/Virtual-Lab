@@ -39,6 +39,11 @@ class ExperimentDetailOut(ExperimentOut):
     quizzes: list[QuizOut] = []
     assignment_locked: bool = False
     assignment_missing_steps: list[str] = Field(default_factory=list)
+    # Student-only learning order: Video, Theory, Guided Lab and Code Exercise open after the
+    # Pre-Quiz is submitted; the Post-Quiz (questions withheld while locked) opens after them.
+    content_locked: bool = False
+    post_quiz_locked: bool = False
+    post_quiz_missing_steps: list[str] = Field(default_factory=list)
     # Student-only status map sourced from saved SectionCompletion rows.
     section_completions: dict[str, bool] = Field(default_factory=dict)
 

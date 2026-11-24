@@ -111,9 +111,11 @@ def complete_static_sections(client, user, exp):
 
 
 def unlock_assignment(client, db, user, exp):
-    """Mark every manual section (including the Code Exercise) and submit both quizzes."""
-    complete_static_sections(client, user, exp)
+    """Follow the learning order: Pre-Quiz, then every manual section (including the Code
+    Exercise), then the Post-Quiz. The content sections open only after the Pre-Quiz and
+    the Post-Quiz only after the sections."""
     assert submit_quiz(client, user, exp, "pre").status_code == 201
+    complete_static_sections(client, user, exp)
     assert submit_quiz(client, user, exp, "post").status_code == 201
 
 

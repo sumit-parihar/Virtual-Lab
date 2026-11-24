@@ -16,7 +16,13 @@ filled circle means done.
 | Pre-Quiz, Post-Quiz | Submit it once. You can try as many times as you like; your best score is kept. |
 | Assignment | Submit it once. It cannot be repeated. |
 
+**Order:** take the **Pre-Quiz** first. It checks what you already know, so the Video, Theory, Guided Lab and Code Exercise open
+only after you submit it. The **Post-Quiz** opens when every earlier section is complete, and the **Assignment** after the Post-Quiz.
+A locked section shows a lock and tells you what to complete first.
+
 - **Quizzes:** click **Start Now**, answer, and submit. You see this attempt's score and your best score.
+- **Video:** under the video you can change the **Speed**, and (when available) the **Quality**: **Data saver** uses much less
+  mobile data. Your choice is remembered on this device.
 - **Code Exercise:** write your answer in the editor, store the final value in the variable `result`, and click **Run** to see it.
   Click **Submit** to check it: you see your output and **Correct** or **Incorrect**. If the exercise has a dataset file, load it by
   the file name shown above the editor.

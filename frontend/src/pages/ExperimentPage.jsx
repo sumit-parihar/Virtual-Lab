@@ -25,6 +25,8 @@ const SECTIONS = [
   { id: "post-quiz", label: SECTION_LABELS["post-quiz"] },
   { id: "assignment", label: SECTION_LABELS.assignment },
 ];
+// Sections that open only after the Pre-Quiz is submitted (server: CONTENT_SECTION_KEYS).
+const CONTENT_SECTION_IDS = new Set(["video", "theory", "guided-lab", "code-editor"]);
 
 export default function ExperimentPage() {
   const { slug } = useParams();
@@ -145,6 +147,23 @@ export default function ExperimentPage() {
   const assignment = getQuiz("assignment");
   const completions = experiment.section_completions || {};
 
+  // Learning order (students only), as decided by the server: the content opens after the Pre-Quiz,
+  // the Post-Quiz after every earlier section, the Assignment after the Post-Quiz.
+  const lockOf = (sectionId) => {
+    if (!isStudent) return null;
+    if (CONTENT_SECTION_IDS.has(sectionId) && experiment.content_locked) {
+      return { kind: "content", steps: ["Pre-Quiz"] };
+    }
+    if (sectionId === "post-quiz" && experiment.post_quiz_locked) {
+      return { kind: "post-quiz", steps: experiment.post_quiz_missing_steps || [] };
+    }
+    if (sectionId === "assignment" && experiment.assignment_locked) {
+      return { kind: "assignment", steps: experiment.assignment_missing_steps || [] };
+    }
+    return null;
+  };
+  const isOpen = (sectionId) => visited.has(sectionId) && !lockOf(sectionId);
+
   const sectionKey = (section) => section.completionKey || section.id;
   const isComplete = (section) => {
     if (section.completionKey) return Boolean(completions[section.completionKey]);
@@ -154,6 +173,7 @@ export default function ExperimentPage() {
   const doneCount = SECTIONS.filter(isComplete).length;
   const currentIndex = SECTIONS.findIndex((s) => s.id === activeSection);
   const current = SECTIONS[currentIndex];
+  const currentLock = lockOf(current.id);
   const prev = SECTIONS[currentIndex - 1];
   const next = SECTIONS[currentIndex + 1];
   const number = String(experiment.order_index).padStart(2, "0");
@@ -197,7 +217,7 @@ export default function ExperimentPage() {
           )}
           <ol className="exp-side__list">
             {SECTIONS.map((section) => {
-              const locked = section.id === "assignment" && isStudent && experiment.assignment_locked;
+              const locked = Boolean(lockOf(section.id));
               // Every tick comes from saved backend state: manual sections (including the Code Exercise) from
               // section_completions, quizzes/assignment from their saved submission.
               const complete = isComplete(section);
@@ -210,7 +230,7 @@ export default function ExperimentPage() {
                     onClick={() => handleSectionSelect(section)}
                     disabled={checkingAssignment}
                     aria-current={active ? "page" : undefined}
-                    title={locked ? "Click to see what remains before the assignment unlocks" : undefined}
+                    title={locked ? "Locked: click to see what to complete first" : undefined}
                   >
                     <span className="exp-side__status">
                       {isStudent && (locked ? (
@@ -254,7 +274,7 @@ export default function ExperimentPage() {
                 <option key={section.id} value={section.id}>
                   {`${i + 1} / ${SECTIONS.length} · ${section.label}`}
                   {isStudent && isComplete(section) ? " ✓" : ""}
-                  {section.id === "assignment" && isStudent && experiment.assignment_locked ? " (locked)" : ""}
+                  {lockOf(section.id) ? " (locked)" : ""}
                 </option>
               ))}
             </select>
@@ -279,11 +299,30 @@ export default function ExperimentPage() {
 
           {sectionError && <div className="alert alert--error section-completion__error" role="alert">{sectionError}</div>}
 
-          {activeSection === "assignment" && isStudent && experiment.assignment_locked && (
+          {currentLock?.kind === "content" && (
+            <div className="alert alert--warning exp-page__lock-note" role="status">
+              <strong>Locked until you submit the Pre-Quiz.</strong> The Pre-Quiz checks what you already know
+              before you study this experiment; the video, theory, guided lab and code exercise open after it.
+              <div className="exp-page__lock-action">
+                <button type="button" className="btn btn--primary" onClick={() => handleSectionSelect(SECTIONS.find((s) => s.id === "pre-quiz"))}>
+                  Go to the Pre-Quiz
+                </button>
+              </div>
+            </div>
+          )}
+          {currentLock?.kind === "post-quiz" && (
+            <div className="alert alert--warning exp-page__lock-note" role="status">
+              <strong>Post-Quiz locked.</strong> Complete the following sections first:
+              <ul>
+                {currentLock.steps.map((step) => <li key={step}>{step}</li>)}
+              </ul>
+            </div>
+          )}
+          {currentLock?.kind === "assignment" && (
             <div className="alert alert--warning exp-page__lock-note" role="status">
               <strong>Assignment locked.</strong> Complete the following sections first:
               <ul>
-                {(experiment.assignment_missing_steps || []).map((step) => <li key={step}>{step}</li>)}
+                {currentLock.steps.map((step) => <li key={step}>{step}</li>)}
               </ul>
             </div>
           )}
@@ -315,19 +354,22 @@ export default function ExperimentPage() {
               </section>
             )}
 
-            {visited.has("video") && (
+            {isOpen("video") && (
               <section className="exp-section" hidden={activeSection !== "video"}>
                 {experiment.video_url ? (
-                  <div className="exp-video-wrapper">
-                    <VideoPlayer url={experiment.video_url} className="exp-video" active={activeSection === "video"} />
-                  </div>
+                  <VideoPlayer
+                    url={experiment.video_url}
+                    className="exp-video"
+                    frameClassName="exp-video-wrapper"
+                    active={activeSection === "video"}
+                  />
                 ) : (
                   <p className="exp-section__placeholder">No video available for this experiment yet.</p>
                 )}
               </section>
             )}
 
-            {visited.has("theory") && (
+            {isOpen("theory") && (
               <section className="exp-section" hidden={activeSection !== "theory"}>
                 {experiment.notes ? (
                   <div className="exp-notes" dangerouslySetInnerHTML={{ __html: simpleMarkdown(experiment.notes) }} />
@@ -337,7 +379,7 @@ export default function ExperimentPage() {
               </section>
             )}
 
-            {visited.has("guided-lab") && (
+            {isOpen("guided-lab") && (
               <section className="exp-section" hidden={activeSection !== "guided-lab"}>
                 <p className="exp-section__intro">Explore the visual demonstration and adjust its parameters where available.</p>
                 {experiment.dataset_info && <DatasetPanel info={experiment.dataset_info} />}
@@ -345,13 +387,13 @@ export default function ExperimentPage() {
               </section>
             )}
 
-            {visited.has("code-editor") && (
+            {isOpen("code-editor") && (
               <section className="exp-section exp-section--code" hidden={activeSection !== "code-editor"}>
                 <CodeExerciseLayout experiment={experiment} isStudent={isStudent} />
               </section>
             )}
 
-            {visited.has("post-quiz") && (
+            {isOpen("post-quiz") && (
               <section className="exp-section" hidden={activeSection !== "post-quiz"}>
                 {postQuiz ? (
                   <QuizPanel quiz={postQuiz} quizType="post" experimentNumber={experiment.order_index} experimentTitle={experiment.title} onComplete={refreshExperiment} readOnly={!isStudent} />
@@ -361,7 +403,7 @@ export default function ExperimentPage() {
               </section>
             )}
 
-            {visited.has("assignment") && !experiment.assignment_locked && (
+            {isOpen("assignment") && (
               <section className="exp-section" hidden={activeSection !== "assignment"}>
                 {assignment ? (
                   <QuizPanel quiz={assignment} quizType="assignment" onComplete={refreshExperiment} readOnly={!isStudent} />
@@ -382,7 +424,7 @@ export default function ExperimentPage() {
             ) : (
               <span />
             )}
-            <div className="exp-pager__middle">{completionControl(current.completionKey)}</div>
+            <div className="exp-pager__middle">{!currentLock && completionControl(current.completionKey)}</div>
             {next ? (
               <button type="button" className="btn btn--ghost exp-pager__btn" onClick={() => handleSectionSelect(next)} disabled={checkingAssignment}>
                 <span className="exp-pager__text" aria-hidden="true">{shortSectionLabel(sectionKey(next))}</span>
